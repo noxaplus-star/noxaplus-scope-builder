@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>پیشنهادساز خدمات</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-content">
+      <div>
+        <span class="brand" lang="en" dir="ltr">NoxaPlus</span>
+        <h1>پیشنهادساز خدمات</h1>
+        <p class="intro">
+          جزئیات پروژه را وارد کنید و پیش‌نمایش پیشنهاد خدمات را ببینید.
+        </p>
+      </div>
+      <span class="milestone">نسخهٔ اولیه · بدون ذخیره‌سازی</span>
+    </div>
+  </header>
+
+  <main class="container">
+    <aside class="notice" aria-label="توضیحات مهم">
+      <p>این ابزار برای تنظیم پیشنهاد خدمات است و جایگزین قرارداد حقوقی نیست.</p>
+      <p>
+        خروجی، پیشنهاد غیرالزام‌آور خدمات است؛ قرارداد یا صورتحساب رسمی مالیاتی نیست.
+        داده‌ها پس از تازه‌سازی صفحه ذخیره نمی‌شوند.
+      </p>
+    </aside>
+
+    <div class="workspace">
+      <section class="panel editor" aria-labelledby="formHeading">
+        <div class="section-header">
+          <div>
+            <h2 id="formHeading">اطلاعات پیشنهاد</h2>
+            <p class="muted">فیلدهای دارای «الزامی» را تکمیل کنید.</p>
+          </div>
+          <div class="actions">
+            <button id="sampleButton" class="button secondary" type="button">
+              بارگذاری نمونهٔ خیالی
+            </button>
+            <button id="resetButton" class="button ghost" type="button">
+              بازنشانی
+            </button>
+          </div>
+        </div>
+
+        <form id="proposalForm" novalidate>
+          <fieldset>
+            <legend>طرفین و پروژه</legend>
+
+            <div class="field">
+              <label for="provider">نام ارائه‌دهنده یا برند — الزامی</label>
+              <input
+                id="provider"
+                name="provider"
+                type="text"
+                value="NoxaPlus"
+                maxlength="120"
+                required
+                aria-describedby="providerError"
+              >
+              <p id="providerError" class="field-error"></p>
+            </div>
+
+            <div class="field">
+              <label for="client">نام مشتری — الزامی</label>
+              <input
+                id="client"
+                name="client"
+                type="text"
+                maxlength="120"
+                required
+                aria-describedby="clientError"
+              >
+              <p id="clientError" class="field-error"></p>
+            </div>
+
+            <div class="field">
+              <label for="project">عنوان پروژه — الزامی</label>
+              <input
+                id="project"
+                name="project"
+                type="text"
+                maxlength="180"
+                required
+                aria-describedby="projectError"
+              >
+              <p id="projectError" class="field-error"></p>
+            </div>
+
+            <div class="field">
+              <label for="description">توضیح کوتاه پروژه</label>
+              <textarea
+                id="description"
+                name="description"
+                rows="3"
+                maxlength="2000"
+              ></textarea>
+            </div>
+
+            <div class="field">
+              <label for="currency">واحد پول نمایشی</label>
+              <select id="currency" name="currency" aria-describedby="currencyHelp">
+                <option value="USD">USD</option>
+                <option value="USDT">USDT</option>
+                <option value="تومان">تومان</option>
+              </select>
+              <p id="currencyHelp" class="hint">
+                تغییر واحد فقط برچسب مبالغ را تغییر می‌دهد؛ تبدیل ارز انجام نمی‌شود.
+              </p>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>خدمات و قیمت‌گذاری</legend>
+
+            <div id="moneyPolicy" class="info-box">
+              <p>
+                سیاست دقت این نمونه: همهٔ مبالغ، حتی تومان، حداکثر دو رقم
+                اعشار دارند و در پیش‌نمایش با دو رقم اعشار نمایش داده می‌شوند.
+                ورودیِ دارای اعشار بیشتر رد می‌شود و گرد نمی‌شود.
+              </p>
+              <p>
+                ارقام فارسی، عربی و انگلیسی پذیرفته می‌شوند. برای اعشار از
+                «.» یا «٫» استفاده کنید؛ جداکنندهٔ هزارگان وارد نکنید.
+                هر مبلغ حداکثر ۱۲ رقم در بخش صحیح دارد.
+              </p>
+            </div>
+
+            <p class="hint">
+              حداقل یک خدمت لازم است. تعداد باید عدد صحیح مثبت و حداکثر ۹ رقمی باشد.
+            </p>
+
+            <div id="serviceRows" class="service-rows"></div>
+            <p id="servicesError" class="field-error"></p>
+
+            <button id="addServiceButton" class="button secondary" type="button">
+              + افزودن خدمت
+            </button>
+
+            <div class="field discount-field">
+              <label for="discount">تخفیف مبلغ ثابت</label>
+              <input
+                id="discount"
+                name="discount"
+                type="text"
+                inputmode="decimal"
+                value="0"
+                dir="ltr"
+                required
+                spellcheck="false"
+                aria-describedby="discountHelp discountError moneyPolicy"
+              >
+              <p id="discountHelp" class="hint">
+                تخفیف در واحد انتخاب‌شده است؛ نباید منفی یا بیشتر از جمع خدمات باشد.
+              </p>
+              <p id="discountError" class="field-error"></p>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>محدوده و تحویل</legend>
+
+            <div class="field">
+              <label for="included">کارهای شامل پیشنهاد</label>
+              <textarea
+                id="included"
+                name="included"
+                rows="4"
+                maxlength="5000"
+                aria-describedby="includedHelp"
+              ></textarea>
+              <p id="includedHelp" class="hint">هر مورد را در یک خط جدا بنویسید.</p>
+            </div>
+
+            <div class="field">
+              <label for="excluded">کارهای خارج از پیشنهاد</label>
+              <textarea
+                id="excluded"
+                name="excluded"
+                rows="4"
+                maxlength="5000"
+                aria-describedby="excludedHelp"
+              ></textarea>
+              <p id="excludedHelp" class="hint">هر مورد را در یک خط جدا بنویسید.</p>
+            </div>
+
+            <div class="field">
+              <label for="delivery">زمان تحویل</label>
+              <input
+                id="delivery"
+                name="delivery"
+                type="text"
+                maxlength="250"
+                placeholder="مثلاً ۷ روز کاری پس از تأیید محدوده"
+              >
+            </div>
+
+            <div class="field">
+              <label for="revisions">تعداد دورهای بازبینی — الزامی</label>
+              <input
+                id="revisions"
+                name="revisions"
+                type="text"
+                inputmode="numeric"
+                value="0"
+                dir="ltr"
+                required
+                aria-describedby="revisionsHelp revisionsError"
+              >
+              <p id="revisionsHelp" class="hint">
+                عدد صحیح نامنفی و حداکثر ۹ رقمی؛ صفر یعنی بدون دور بازبینی.
+              </p>
+              <p id="revisionsError" class="field-error"></p>
+            </div>
+          </fieldset>
+        </form>
+      </section>
+
+      <section class="panel preview" aria-labelledby="previewHeading">
+        <div class="section-header">
+          <div>
+            <span class="eyebrow">پیش‌نمایش زنده</span>
+            <h2 id="previewHeading">پیشنهاد خدمات</h2>
+          </div>
+          <span class="document-badge">غیرالزام‌آور</span>
+        </div>
+
+        <p id="previewStatus" class="status" role="status" aria-live="polite"></p>
+
+        <dl class="project-details">
+          <div>
+            <dt>ارائه‌دهنده</dt>
+            <dd id="previewProvider"></dd>
+          </div>
+          <div>
+            <dt>مشتری</dt>
+            <dd id="previewClient"></dd>
+          </div>
+          <div class="full-width">
+            <dt>پروژه</dt>
+            <dd id="previewProject"></dd>
+          </div>
+        </dl>
+
+        <section class="preview-section" aria-labelledby="descriptionHeading">
+          <h3 id="descriptionHeading">شرح پروژه</h3>
+          <p id="previewDescription" class="preserve-lines"></p>
+        </section>
+
+        <section class="preview-section" aria-labelledby="servicesHeading">
+          <h3 id="servicesHeading">خدمات پیشنهادی</h3>
+
+          <div
+            class="table-scroll"
+            tabindex="0"
+            role="region"
+            aria-label="جدول خدمات؛ در صفحهٔ کوچک قابل پیمایش افقی است"
+          >
+            <table>
+              <caption>جزئیات خدمات و مبالغ در واحد انتخاب‌شده</caption>
+              <thead>
+                <tr>
+                  <th scope="col">خدمت</th>
+                  <th scope="col">تعداد</th>
+                  <th scope="col">قیمت واحد</th>
+                  <th scope="col">مبلغ ردیف</th>
+                </tr>
+              </thead>
+              <tbody id="previewServices"></tbody>
+            </table>
+          </div>
+
+          <dl class="totals">
+            <div>
+              <dt>جمع خدمات</dt>
+              <dd id="previewSubtotal"></dd>
+            </div>
+            <div>
+              <dt>تخفیف ثابت</dt>
+              <dd id="previewDiscount"></dd>
+            </div>
+            <div class="grand-total">
+              <dt>مبلغ نهایی پیشنهادی</dt>
+              <dd id="previewTotal"></dd>
+            </div>
+          </dl>
+
+          <p id="calculationMessage" class="calculation-message"></p>
+        </section>
+
+        <section class="preview-section" aria-labelledby="includedHeading">
+          <h3 id="includedHeading">شامل پیشنهاد</h3>
+          <ul id="previewIncluded" class="scope-list"></ul>
+        </section>
+
+        <section class="preview-section" aria-labelledby="excludedHeading">
+          <h3 id="excludedHeading">خارج از پیشنهاد</h3>
+          <ul id="previewExcluded" class="scope-list"></ul>
+        </section>
+
+        <dl class="delivery-details">
+          <div>
+            <dt>زمان تحویل</dt>
+            <dd id="previewDelivery"></dd>
+          </div>
+          <div>
+            <dt>دورهای بازبینی</dt>
+            <dd id="previewRevisions"></dd>
+          </div>
+        </dl>
+
+        <p class="preview-disclaimer">
+          این ابزار برای تنظیم پیشنهاد خدمات است و جایگزین قرارداد حقوقی نیست.
+          این پیشنهاد غیرالزام‌آور است و صورتحساب رسمی مالیاتی محسوب نمی‌شود.
+        </p>
+      </section>
+    </div>
+
+    <noscript>
+      <p class="notice">
+        برای محاسبات و پیش‌نمایش این صفحه، جاوااسکریپت مرورگر باید فعال باشد.
+      </p>
+    </noscript>
+  </main>
+
+  <footer class="container site-footer">
+    NoxaPlus Scope Builder · بدون ذخیره‌سازی یا ارسال داده به سرور
+  </footer>
+</body>
+</html>
