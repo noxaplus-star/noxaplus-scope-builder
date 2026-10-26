@@ -251,11 +251,9 @@ AI assistance was used to draft and revise application code and documentation.
 Manual test results recorded here were reported by the user. They should not
 be interpreted as automated testing or an independent security audit.
 
-## Licensing status
+## Licensing
 
-A license has not yet been selected. No `LICENSE` file is included in this
-version. Free-to-use project intent should not be interpreted as an already
-granted open-source license.
+Licensed under the MIT License. See [LICENSE](LICENSE).
 
 ## فارسی
 
