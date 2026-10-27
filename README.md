@@ -1,3 +1,7 @@
+## Live Demo
+
+[Open NoxaPlus Scope Builder](https://noxaplus-star.github.io/noxaplus-scope-builder/)
+
 # NoxaPlus Scope Builder
 
 A free-to-use, browser-based tool for freelancers and small service providers
