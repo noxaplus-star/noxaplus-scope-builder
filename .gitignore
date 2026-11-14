@@ -1,0 +1,8 @@
+# Local private data and exports — never commit real proposals or client info.
+private-data/
+backups/
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
