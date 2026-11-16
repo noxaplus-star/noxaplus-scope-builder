@@ -1,335 +1,672 @@
 <!DOCTYPE html>
-<html lang="fa" dir="rtl">
+<html lang="fa" dir="rtl" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
-  <title>پیشنهادساز خدمات</title>
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f5f4f1" id="themeColorMeta">
+  <meta name="description" content="پیشنهادساز خدمات NoxaPlus؛ ساخت پیشنهاد شفاف با محاسبهٔ دقیق، پیش‌نمایش زنده و خروجی PDF، بدون ارسال اطلاعات به سرور.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23173a8a'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-size='38' font-weight='700' text-anchor='middle' fill='white'%3EN%3C/text%3E%3C/svg%3E">
+  <title>NoxaPlus · پیشنهادساز خدمات</title>
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("noxaplus-scope-builder:theme");
+        var theme = saved === "dark" || saved === "light"
+          ? saved
+          : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.setAttribute("data-theme", theme);
+        var themeMeta = document.getElementById("themeColorMeta");
+        if (themeMeta) {
+          themeMeta.setAttribute("content", theme === "dark" ? "#0b0f17" : "#f5f4f1");
+        }
+      } catch (error) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
   <link rel="stylesheet" href="./style.css">
   <script src="./app.js" defer></script>
 </head>
 <body>
-  <header class="site-header">
-    <div class="container header-content">
-      <div>
-        <span class="brand" lang="en" dir="ltr">NoxaPlus</span>
-        <h1>پیشنهادساز خدمات</h1>
-        <p class="intro">
-          جزئیات پروژه را وارد کنید و پیش‌نمایش پیشنهاد خدمات را ببینید.
-        </p>
+  <a class="skip-link" href="#editorColumn">رفتن به فرم پیشنهاد</a>
+
+  <svg class="icon-sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-lock" viewBox="0 0 24 24">
+      <rect x="4" y="10" width="16" height="10" rx="2"></rect>
+      <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+    </symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24">
+      <path d="M20 15.2A8.5 8.5 0 0 1 8.8 4a8.5 8.5 0 1 0 11.2 11.2Z"></path>
+    </symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="4"></circle>
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+    </symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24">
+      <path d="m12 3 1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3Z"></path>
+      <path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"></path>
+      <path d="M5 15.5 5.6 17l1.4.5-1.4.5L5 19.5 4.4 18 3 17.5l1.4-.5L5 15.5Z"></path>
+    </symbol>
+    <symbol id="i-save" viewBox="0 0 24 24">
+      <path d="M5 3h11l3 3v15H5V3Z"></path>
+      <path d="M8 3v6h8V3M8 21v-7h8v7"></path>
+    </symbol>
+    <symbol id="i-open" viewBox="0 0 24 24">
+      <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"></path>
+      <path d="M3 10h18"></path>
+    </symbol>
+    <symbol id="i-print" viewBox="0 0 24 24">
+      <path d="M7 8V3h10v5"></path>
+      <rect x="3" y="8" width="18" height="9" rx="2"></rect>
+      <path d="M7 14h10v7H7z"></path>
+    </symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24">
+      <path d="M3 4v6h6"></path>
+      <path d="M4.6 15a8 8 0 1 0 .4-6.3L3 10"></path>
+    </symbol>
+    <symbol id="i-users" viewBox="0 0 24 24">
+      <circle cx="9" cy="8" r="3.2"></circle>
+      <path d="M3.5 20a5.5 5.5 0 0 1 11 0"></path>
+      <path d="M16 5.2a3.2 3.2 0 0 1 0 5.6M17.5 14.4a5.5 5.5 0 0 1 3 5.1"></path>
+    </symbol>
+    <symbol id="i-hash" viewBox="0 0 24 24">
+      <path d="M9 3 7.5 21M16.5 3 15 21M4 8h17M3 16h17"></path>
+    </symbol>
+    <symbol id="i-layers" viewBox="0 0 24 24">
+      <path d="m12 3 9 5-9 5-9-5 9-5Z"></path>
+      <path d="m3 12 9 5 9-5M3 16.5l9 5 9-5"></path>
+    </symbol>
+    <symbol id="i-list" viewBox="0 0 24 24">
+      <path d="M9 6h12M9 12h12M9 18h12"></path>
+      <path d="M4 6h.01M4 12h.01M4 18h.01"></path>
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24">
+      <path d="M12 5v14M5 12h14"></path>
+    </symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24">
+      <path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6"></path>
+    </symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24">
+      <path d="m9 6 6 6-6 6"></path>
+    </symbol>
+    <symbol id="i-info" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9"></circle>
+      <path d="M12 11v6M12 7.5h.01"></path>
+    </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24">
+      <path d="m5 12.5 4.5 4.5L19 6.5"></path>
+    </symbol>
+    <symbol id="i-x" viewBox="0 0 24 24">
+      <path d="M6 6l12 12M18 6 6 18"></path>
+    </symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9"></circle>
+      <path d="M12 7v5l3 2"></path>
+    </symbol>
+    <symbol id="i-close" viewBox="0 0 24 24">
+      <path d="M6 6l12 12M18 6 6 18"></path>
+    </symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24">
+      <path d="M4 20h4l11-11-4-4L4 16v4Z"></path>
+      <path d="m13.5 6.5 4 4"></path>
+    </symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24">
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"></path>
+      <circle cx="12" cy="12" r="3"></circle>
+    </symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24">
+      <path d="M12 3 5 6v5c0 4.7 3 8.1 7 10 4-1.9 7-5.3 7-10V6l-7-3Z"></path>
+      <path d="m9 12 2 2 4-4"></path>
+    </symbol>
+    <symbol id="i-file" viewBox="0 0 24 24">
+      <path d="M6 2h8l4 4v16H6V2Z"></path>
+      <path d="M14 2v5h5M9 13h6M9 17h6"></path>
+    </symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24">
+      <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4H19a1 1 0 0 1 1 1v14H6.5A2.5 2.5 0 0 1 4 16.5v-10Z"></path>
+      <path d="M4 8h16M15 12h5v4h-5a2 2 0 0 1 0-4Z"></path>
+    </symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24">
+      <path d="M19 12H5M11 6l-6 6 6 6"></path>
+    </symbol>
+  </svg>
+
+  <header class="app-header">
+    <div class="container header-inner">
+      <div class="brand" aria-label="NoxaPlus Scope Builder">
+        <span class="brand-mark" aria-hidden="true">N</span>
+        <span class="brand-text">
+          <span class="brand-name" lang="en" dir="ltr">NoxaPlus</span>
+          <span class="brand-product">Scope Builder</span>
+        </span>
       </div>
-      <span class="milestone">نسخهٔ اولیه · بدون ذخیره‌سازی</span>
+      <div class="header-actions">
+        <span class="local-badge">
+          <svg class="icon" aria-hidden="true"><use href="#i-lock"></use></svg>
+          پردازش محلی
+        </span>
+        <button id="themeToggle" class="icon-button" type="button" aria-label="تغییر به حالت تاریک" aria-pressed="false">
+          <svg class="icon theme-icon-moon" aria-hidden="true"><use href="#i-moon"></use></svg>
+          <svg class="icon theme-icon-sun" aria-hidden="true"><use href="#i-sun"></use></svg>
+        </button>
+      </div>
     </div>
   </header>
 
-  <main class="container">
-    <aside class="notice" aria-label="توضیحات مهم">
-      <p>این ابزار برای تنظیم پیشنهاد خدمات است و جایگزین قرارداد حقوقی نیست.</p>
-      <p>
-        خروجی، پیشنهاد غیرالزام‌آور خدمات است؛ قرارداد یا صورتحساب رسمی مالیاتی نیست.
-        داده‌ها پس از تازه‌سازی صفحه ذخیره نمی‌شوند.
-      </p>
-    </aside>
+  <main class="container app-main" id="main">
+    <section class="page-intro" aria-labelledby="pageTitle">
+      <div class="intro-copy">
+        <p class="eyebrow"><span aria-hidden="true"></span> پیشنهاد خدمات حرفه‌ای</p>
+        <h1 id="pageTitle">محدودهٔ کار را شفاف و حرفه‌ای ارائه کنید.</h1>
+        <p class="lede">
+          پیشنهاد خدمات خود را در چند دقیقه بسازید؛ قیمت‌ها دقیق محاسبه می‌شوند و
+          سند نهایی آمادهٔ چاپ یا ذخیره به‌صورت PDF است.
+        </p>
+      </div>
+      <ul class="assurance-list" aria-label="مزیت‌های ابزار">
+        <li>
+          <svg class="icon" aria-hidden="true"><use href="#i-shield"></use></svg>
+          داده‌ها به سرور ارسال نمی‌شوند
+        </li>
+        <li>
+          <svg class="icon" aria-hidden="true"><use href="#i-save"></use></svg>
+          ذخیرهٔ خودکار در همین مرورگر
+        </li>
+        <li>
+          <svg class="icon" aria-hidden="true"><use href="#i-print"></use></svg>
+          خروجی تمیز و آمادهٔ چاپ
+        </li>
+      </ul>
+    </section>
 
-    <div class="workspace">
-      <section class="panel editor" aria-labelledby="formHeading">
-        <div class="section-header">
-          <div>
-            <h2 id="formHeading">اطلاعات پیشنهاد</h2>
-            <p class="muted">فیلدهای دارای «الزامی» را تکمیل کنید.</p>
+    <div class="view-switcher" role="tablist" aria-label="نمای کار">
+      <button id="viewEditorTab" class="view-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="editorColumn" data-view-target="editor">
+        <svg class="icon" aria-hidden="true"><use href="#i-edit"></use></svg>
+        ویرایش پیشنهاد
+      </button>
+      <button id="viewPreviewTab" class="view-tab" type="button" role="tab" aria-selected="false" aria-controls="previewColumn" data-view-target="preview">
+        <svg class="icon" aria-hidden="true"><use href="#i-eye"></use></svg>
+        پیش‌نمایش سند
+      </button>
+    </div>
+
+    <div class="workspace" id="workspace" data-view="editor">
+      <section class="editor-column" id="editorColumn" aria-labelledby="formHeading">
+        <div class="editor-toolbar">
+          <div class="toolbar-meta">
+            <div class="completion" aria-label="میزان تکمیل پیشنهاد">
+              <div class="completion-label">
+                <span>آمادگی سند</span>
+                <strong id="completionValue">۰٪</strong>
+              </div>
+              <div class="meter" role="progressbar" aria-labelledby="completionLabel" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="completionMeter">
+                <span id="completionBar"></span>
+              </div>
+              <span id="completionLabel" class="sr-only">درصد تکمیل پیشنهاد</span>
+            </div>
+            <div class="autosave" id="autosaveStatus" role="status" aria-live="polite">
+              <span class="autosave-dot" aria-hidden="true"></span>
+              <span id="autosaveText">ذخیرهٔ خودکار فعال</span>
+            </div>
           </div>
-          <div class="actions">
-            <button id="sampleButton" class="button secondary" type="button">
-              بارگذاری نمونهٔ خیالی
+
+          <div class="toolbar-actions" id="documentActions">
+            <button id="templatesButton" class="button button-accent" type="button">
+              <svg class="icon" aria-hidden="true"><use href="#i-sparkles"></use></svg>
+              الگوها
             </button>
-            <button id="resetButton" class="button ghost" type="button">
+            <button id="exportButton" class="button button-secondary" type="button" aria-describedby="filePrivacyHelp">
+              <svg class="icon" aria-hidden="true"><use href="#i-save"></use></svg>
+              ذخیرهٔ JSON
+            </button>
+            <button id="importButton" class="button button-secondary" type="button" aria-describedby="filePrivacyHelp">
+              <svg class="icon" aria-hidden="true"><use href="#i-open"></use></svg>
+              باز کردن
+            </button>
+            <button id="printButton" class="button button-primary" type="button" aria-describedby="printHelp">
+              <svg class="icon" aria-hidden="true"><use href="#i-print"></use></svg>
+              چاپ / PDF
+            </button>
+            <button id="resetButton" class="button button-ghost" type="button">
+              <svg class="icon" aria-hidden="true"><use href="#i-reset"></use></svg>
               بازنشانی
             </button>
+            <input id="proposalFile" type="file" accept=".json,application/json" hidden>
           </div>
+
+          <p id="filePrivacyHelp" class="sr-only">
+            فایل JSON فقط روی دستگاه شما ساخته می‌شود و شامل اطلاعات مشتری و قیمت‌هاست. صفحه داده‌ها را به سرور ارسال نمی‌کند.
+          </p>
+          <p id="printHelp" class="sr-only">
+            برای ذخیرهٔ PDF، در پنجرهٔ چاپ مرورگر گزینهٔ Save as PDF را انتخاب کنید. برنامه نمی‌تواند ذخیره‌شدن فایل را تأیید کند.
+          </p>
+          <p id="fileMessage" class="inline-message" role="status" aria-live="polite" hidden></p>
+          <p id="printMessage" class="inline-message" role="status" aria-live="polite" hidden></p>
         </div>
 
-        <form id="proposalForm" novalidate>
-          <fieldset>
-            <legend>طرفین و پروژه</legend>
+        <div id="restoreBanner" class="restore-banner" hidden>
+          <svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg>
+          <p>پیش‌نویس قبلی از همین مرورگر بازیابی شد.</p>
+          <button id="newProposalButton" class="link-button" type="button">شروع تازه</button>
+        </div>
 
-            <div class="field">
-              <label for="provider">نام ارائه‌دهنده یا برند — الزامی</label>
-              <input
-                id="provider"
-                name="provider"
-                type="text"
-                value="NoxaPlus"
-                maxlength="120"
-                required
-                aria-describedby="providerError"
-              >
-              <p id="providerError" class="field-error"></p>
-            </div>
-
-            <div class="field">
-              <label for="client">نام مشتری — الزامی</label>
-              <input
-                id="client"
-                name="client"
-                type="text"
-                maxlength="120"
-                required
-                aria-describedby="clientError"
-              >
-              <p id="clientError" class="field-error"></p>
-            </div>
-
-            <div class="field">
-              <label for="project">عنوان پروژه — الزامی</label>
-              <input
-                id="project"
-                name="project"
-                type="text"
-                maxlength="180"
-                required
-                aria-describedby="projectError"
-              >
-              <p id="projectError" class="field-error"></p>
-            </div>
-
-            <div class="field">
-              <label for="description">توضیح کوتاه پروژه</label>
-              <textarea
-                id="description"
-                name="description"
-                rows="3"
-                maxlength="2000"
-              ></textarea>
-            </div>
-
-            <div class="field">
-              <label for="currency">واحد پول نمایشی</label>
-              <select id="currency" name="currency" aria-describedby="currencyHelp">
-                <option value="USD">USD</option>
-                <option value="USDT">USDT</option>
-                <option value="تومان">تومان</option>
-              </select>
-              <p id="currencyHelp" class="hint">
-                تغییر واحد فقط برچسب مبالغ را تغییر می‌دهد؛ تبدیل ارز انجام نمی‌شود.
-              </p>
-            </div>
-          </fieldset>
-
-          <fieldset>
-            <legend>خدمات و قیمت‌گذاری</legend>
-
-            <div id="moneyPolicy" class="info-box">
-              <p>
-                سیاست دقت این نمونه: همهٔ مبالغ، حتی تومان، حداکثر دو رقم
-                اعشار دارند و در پیش‌نمایش با دو رقم اعشار نمایش داده می‌شوند.
-                ورودیِ دارای اعشار بیشتر رد می‌شود و گرد نمی‌شود.
-              </p>
-              <p>
-                ارقام فارسی، عربی و انگلیسی پذیرفته می‌شوند. برای اعشار از
-                «.» یا «٫» استفاده کنید؛ جداکنندهٔ هزارگان وارد نکنید.
-                هر مبلغ حداکثر ۱۲ رقم در بخش صحیح دارد.
-              </p>
-            </div>
-
-            <p class="hint">
-              حداقل یک خدمت لازم است. تعداد باید عدد صحیح مثبت و حداکثر ۹ رقمی باشد.
+        <details class="legal-note">
+          <summary>
+            <span class="summary-main">
+              <svg class="icon" aria-hidden="true"><use href="#i-info"></use></svg>
+              این سند پیشنهاد غیرالزام‌آور است
+            </span>
+            <span class="summary-hint">جزئیات</span>
+          </summary>
+          <div class="legal-note-body">
+            <p>
+              این ابزار برای تنظیم پیشنهاد خدمات است و جایگزین قرارداد حقوقی نیست.
+              خروجی، پیشنهاد غیرالزام‌آور خدمات است؛ قرارداد یا صورت‌حساب رسمی مالیاتی نیست.
             </p>
+            <p>
+              اطلاعات در حافظهٔ همین مرورگر ذخیره می‌شود و به سرور ارسال نمی‌شود.
+              فایل‌های JSON و PDF شامل اطلاعات مشتری و قیمت‌ها هستند؛ آن‌ها را محافظت کنید.
+            </p>
+          </div>
+        </details>
+
+        <form id="proposalForm" novalidate>
+          <section class="form-card" aria-labelledby="partiesHeading">
+            <div class="form-card-head">
+              <span class="step-index" aria-hidden="true">۰۱</span>
+              <div>
+                <h2 id="partiesHeading">طرفین و پروژه</h2>
+                <p>نام‌ها و عنوانی که در سند دیده می‌شود.</p>
+              </div>
+              <span class="step-icon" aria-hidden="true">
+                <svg class="icon"><use href="#i-users"></use></svg>
+              </span>
+            </div>
+
+            <div class="field-grid">
+              <div class="field">
+                <label for="provider">نام ارائه‌دهنده یا برند <span class="req" aria-hidden="true">*</span><span class="sr-only">(الزامی)</span></label>
+                <input id="provider" name="provider" type="text" value="NoxaPlus" maxlength="120" required aria-describedby="providerError" autocomplete="organization">
+                <p id="providerError" class="field-error"></p>
+              </div>
+
+              <div class="field">
+                <label for="client">نام مشتری <span class="req" aria-hidden="true">*</span><span class="sr-only">(الزامی)</span></label>
+                <input id="client" name="client" type="text" maxlength="120" required aria-describedby="clientError" autocomplete="organization">
+                <p id="clientError" class="field-error"></p>
+              </div>
+
+              <div class="field field-full">
+                <label for="project">عنوان پروژه <span class="req" aria-hidden="true">*</span><span class="sr-only">(الزامی)</span></label>
+                <input id="project" name="project" type="text" maxlength="180" required aria-describedby="projectError">
+                <p id="projectError" class="field-error"></p>
+              </div>
+
+              <div class="field field-full">
+                <label for="description">توضیح کوتاه پروژه</label>
+                <textarea id="description" name="description" rows="3" maxlength="2000" placeholder="هدف پروژه، مخاطب و نتیجهٔ مورد انتظار را در چند جمله بنویسید."></textarea>
+                <p class="hint">این متن در بخش «شرح پروژه» سند نمایش داده می‌شود.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card" aria-labelledby="documentHeading">
+            <div class="form-card-head">
+              <span class="step-index" aria-hidden="true">۰۲</span>
+              <div>
+                <h2 id="documentHeading">شناسهٔ سند</h2>
+                <p>شماره، تاریخ و واحد پول پیشنهاد.</p>
+              </div>
+              <span class="step-icon" aria-hidden="true">
+                <svg class="icon"><use href="#i-hash"></use></svg>
+              </span>
+            </div>
+
+            <div class="field-grid">
+              <div class="field">
+                <label for="proposalNumber">شمارهٔ پیشنهاد <span class="req" aria-hidden="true">*</span><span class="sr-only">(الزامی)</span></label>
+                <input id="proposalNumber" name="proposalNumber" type="text" maxlength="60" required dir="ltr" spellcheck="false" aria-describedby="proposalNumberError">
+                <p id="proposalNumberError" class="field-error"></p>
+              </div>
+
+              <div class="field">
+                <label for="proposalDate">تاریخ صدور <span class="req" aria-hidden="true">*</span><span class="sr-only">(الزامی)</span></label>
+                <input id="proposalDate" name="proposalDate" type="text" maxlength="40" required aria-describedby="proposalDateError">
+                <p id="proposalDateError" class="field-error"></p>
+              </div>
+
+              <div class="field field-full">
+                <label for="currency">واحد پول نمایشی</label>
+                <select id="currency" name="currency" aria-describedby="currencyHelp">
+                  <option value="USD">USD — دلار</option>
+                  <option value="USDT">USDT — تتر</option>
+                  <option value="تومان">تومان</option>
+                </select>
+                <p id="currencyHelp" class="hint">تغییر واحد فقط برچسب مبالغ را عوض می‌کند؛ تبدیل ارز انجام نمی‌شود.</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-card" aria-labelledby="servicesHeading">
+            <div class="form-card-head">
+              <span class="step-index" aria-hidden="true">۰۳</span>
+              <div>
+                <h2 id="servicesHeading">خدمات و قیمت‌گذاری</h2>
+                <p>هر خدمت را با تعداد و قیمت واحد مشخص کنید.</p>
+              </div>
+              <span class="step-icon" aria-hidden="true">
+                <svg class="icon"><use href="#i-wallet"></use></svg>
+              </span>
+            </div>
+
+            <details class="inline-help">
+              <summary>راهنمای ورود مبلغ و عدد</summary>
+              <div id="moneyPolicy">
+                <p>ارقام فارسی، عربی و انگلیسی پذیرفته می‌شوند. برای اعشار از «.» یا «٫» استفاده کنید و جداکنندهٔ هزارگان وارد نکنید.</p>
+                <p>هر مبلغ حداکثر ۱۲ رقم صحیح و ۲ رقم اعشار دارد؛ ورودی دقیق‌تر به‌جای گردشدن رد می‌شود. مبالغ حتی برای تومان با دو رقم اعشار نمایش داده می‌شوند.</p>
+                <p>تعداد باید عدد صحیح مثبت و حداکثر ۹ رقمی باشد. تخفیف نمی‌تواند منفی یا بیشتر از جمع خدمات باشد.</p>
+              </div>
+            </details>
 
             <div id="serviceRows" class="service-rows"></div>
             <p id="servicesError" class="field-error"></p>
 
-            <button id="addServiceButton" class="button secondary" type="button">
-              + افزودن خدمت
+            <button id="addServiceButton" class="add-row" type="button">
+              <svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg>
+              افزودن خدمت
             </button>
 
-            <div class="field discount-field">
-              <label for="discount">تخفیف مبلغ ثابت</label>
-              <input
-                id="discount"
-                name="discount"
-                type="text"
-                inputmode="decimal"
-                value="0"
-                dir="ltr"
-                required
-                spellcheck="false"
-                aria-describedby="discountHelp discountError moneyPolicy"
-              >
-              <p id="discountHelp" class="hint">
-                تخفیف در واحد انتخاب‌شده است؛ نباید منفی یا بیشتر از جمع خدمات باشد.
-              </p>
-              <p id="discountError" class="field-error"></p>
+            <div class="discount-row">
+              <div class="field">
+                <label for="discount">تخفیف مبلغ ثابت</label>
+                <div class="input-affix">
+                  <input id="discount" name="discount" type="text" inputmode="decimal" value="0" dir="ltr" required spellcheck="false" aria-describedby="discountHelp discountError moneyPolicy">
+                  <span class="currency-suffix">USD</span>
+                </div>
+                <p id="discountHelp" class="hint">تخفیف در واحد انتخاب‌شده کسر می‌شود.</p>
+                <p id="discountError" class="field-error"></p>
+              </div>
             </div>
-          </fieldset>
+          </section>
 
-          <fieldset>
-            <legend>محدوده و تحویل</legend>
-
-            <div class="field">
-              <label for="included">کارهای شامل پیشنهاد</label>
-              <textarea
-                id="included"
-                name="included"
-                rows="4"
-                maxlength="5000"
-                aria-describedby="includedHelp"
-              ></textarea>
-              <p id="includedHelp" class="hint">هر مورد را در یک خط جدا بنویسید.</p>
+          <section class="form-card" aria-labelledby="scopeHeading">
+            <div class="form-card-head">
+              <span class="step-index" aria-hidden="true">۰۴</span>
+              <div>
+                <h2 id="scopeHeading">محدوده و تحویل</h2>
+                <p>مرزهای همکاری را از ابتدا روشن کنید.</p>
+              </div>
+              <span class="step-icon" aria-hidden="true">
+                <svg class="icon"><use href="#i-list"></use></svg>
+              </span>
             </div>
 
-            <div class="field">
-              <label for="excluded">کارهای خارج از پیشنهاد</label>
-              <textarea
-                id="excluded"
-                name="excluded"
-                rows="4"
-                maxlength="5000"
-                aria-describedby="excludedHelp"
-              ></textarea>
-              <p id="excludedHelp" class="hint">هر مورد را در یک خط جدا بنویسید.</p>
-            </div>
+            <div class="field-grid">
+              <div class="field">
+                <label for="included">کارهای شامل پیشنهاد</label>
+                <textarea id="included" name="included" rows="5" maxlength="5000" placeholder="هر مورد را در یک خط جدا بنویسید." aria-describedby="includedHelp"></textarea>
+                <p id="includedHelp" class="hint">موارد کلیدی که در این پیشنهاد انجام می‌شوند.</p>
+              </div>
 
-            <div class="field">
-              <label for="delivery">زمان تحویل</label>
-              <input
-                id="delivery"
-                name="delivery"
-                type="text"
-                maxlength="250"
-                placeholder="مثلاً ۷ روز کاری پس از تأیید محدوده"
-              >
-            </div>
+              <div class="field">
+                <label for="excluded">کارهای خارج از پیشنهاد</label>
+                <textarea id="excluded" name="excluded" rows="5" maxlength="5000" placeholder="هر مورد را در یک خط جدا بنویسید." aria-describedby="excludedHelp"></textarea>
+                <p id="excludedHelp" class="hint">مواردی که برای جلوگیری از سوءتفاهم باید خارج از محدوده بمانند.</p>
+              </div>
 
-            <div class="field">
-              <label for="revisions">تعداد دورهای بازبینی — الزامی</label>
-              <input
-                id="revisions"
-                name="revisions"
-                type="text"
-                inputmode="numeric"
-                value="0"
-                dir="ltr"
-                required
-                aria-describedby="revisionsHelp revisionsError"
-              >
-              <p id="revisionsHelp" class="hint">
-                عدد صحیح نامنفی و حداکثر ۹ رقمی؛ صفر یعنی بدون دور بازبینی.
-              </p>
-              <p id="revisionsError" class="field-error"></p>
+              <div class="field">
+                <label for="delivery">زمان تحویل</label>
+                <input id="delivery" name="delivery" type="text" maxlength="250" placeholder="مثلاً ۷ روز کاری پس از تأیید محدوده">
+              </div>
+
+              <div class="field">
+                <label for="revisions">تعداد دورهای بازبینی <span class="req" aria-hidden="true">*</span><span class="sr-only">(الزامی)</span></label>
+                <input id="revisions" name="revisions" type="text" inputmode="numeric" value="0" dir="ltr" required aria-describedby="revisionsHelp revisionsError">
+                <p id="revisionsHelp" class="hint">عدد صحیح نامنفی؛ صفر یعنی بدون دور بازبینی.</p>
+                <p id="revisionsError" class="field-error"></p>
+              </div>
             </div>
-          </fieldset>
+          </section>
         </form>
+
+        <footer class="editor-footer">
+          <p class="storage-note">
+            <svg class="icon" aria-hidden="true"><use href="#i-shield"></use></svg>
+            پیش‌نویس فقط در حافظهٔ همین مرورگر نگهداری می‌شود.
+          </p>
+          <button id="clearDraftButton" class="link-button" type="button">پاک کردن نسخهٔ ذخیره‌شده</button>
+        </footer>
       </section>
 
-      <section class="panel preview" aria-labelledby="previewHeading">
-        <div class="section-header">
-          <div>
-            <span class="eyebrow">پیش‌نمایش زنده</span>
-            <h2 id="previewHeading">پیشنهاد خدمات</h2>
-          </div>
+      <section class="preview-column" id="previewColumn" aria-label="پیش‌نمایش پیشنهاد خدمات">
+        <div class="preview-toolbar">
+          <span class="live-label"><span class="live-dot" aria-hidden="true"></span> پیش‌نمایش زنده</span>
+          <p id="previewStatus" class="status" role="status" aria-live="polite"></p>
           <span class="document-badge">غیرالزام‌آور</span>
+          <button id="previewPrintButton" class="icon-button preview-print" type="button" aria-label="چاپ یا ذخیرهٔ PDF">
+            <svg class="icon" aria-hidden="true"><use href="#i-print"></use></svg>
+          </button>
         </div>
 
-        <p id="previewStatus" class="status" role="status" aria-live="polite"></p>
-
-        <dl class="project-details">
-          <div>
-            <dt>ارائه‌دهنده</dt>
-            <dd id="previewProvider"></dd>
-          </div>
-          <div>
-            <dt>مشتری</dt>
-            <dd id="previewClient"></dd>
-          </div>
-          <div class="full-width">
-            <dt>پروژه</dt>
-            <dd id="previewProject"></dd>
-          </div>
-        </dl>
-
-        <section class="preview-section" aria-labelledby="descriptionHeading">
-          <h3 id="descriptionHeading">شرح پروژه</h3>
-          <p id="previewDescription" class="preserve-lines"></p>
-        </section>
-
-        <section class="preview-section" aria-labelledby="servicesHeading">
-          <h3 id="servicesHeading">خدمات پیشنهادی</h3>
-
-          <div
-            class="table-scroll"
-            tabindex="0"
-            role="region"
-            aria-label="جدول خدمات؛ در صفحهٔ کوچک قابل پیمایش افقی است"
-          >
-            <table>
-              <caption>جزئیات خدمات و مبالغ در واحد انتخاب‌شده</caption>
-              <thead>
-                <tr>
-                  <th scope="col">خدمت</th>
-                  <th scope="col">تعداد</th>
-                  <th scope="col">قیمت واحد</th>
-                  <th scope="col">مبلغ ردیف</th>
-                </tr>
-              </thead>
-              <tbody id="previewServices"></tbody>
-            </table>
+        <article class="document" aria-labelledby="previewProject">
+          <div id="documentEmptyHint" class="document-empty-hint">
+            <span class="empty-icon" aria-hidden="true">
+              <svg class="icon"><use href="#i-file"></use></svg>
+            </span>
+            <strong>سند شما اینجا ساخته می‌شود</strong>
+            <p>شروع از یک الگو سریع‌تر است؛ همهٔ مقادیر بعداً قابل ویرایش‌اند.</p>
+            <button id="emptyTemplateButton" class="button button-secondary button-small" type="button">شروع با یک الگو</button>
           </div>
 
-          <dl class="totals">
+          <header class="document-head">
+            <div class="doc-brand">
+              <span class="doc-brand-mark" aria-hidden="true">N</span>
+              <div>
+                <strong id="previewProvider">NoxaPlus</strong>
+                <span>پیشنهاد خدمات</span>
+              </div>
+            </div>
+            <dl class="doc-meta">
+              <div>
+                <dt>شماره</dt>
+                <dd id="previewProposalNumber" dir="ltr"></dd>
+              </div>
+              <div>
+                <dt>تاریخ</dt>
+                <dd id="previewProposalDate"></dd>
+              </div>
+            </dl>
+          </header>
+
+          <div class="doc-title-block">
+            <p class="doc-eyebrow">پیشنهاد همکاری</p>
+            <h2 id="previewProject">عنوان پروژه</h2>
+            <p class="doc-client">برای <strong id="previewClient">مشتری</strong></p>
+          </div>
+
+          <dl class="doc-summary">
             <div>
-              <dt>جمع خدمات</dt>
-              <dd id="previewSubtotal"></dd>
+              <dt>ارائه‌دهنده</dt>
+              <dd id="previewProviderMeta">NoxaPlus</dd>
             </div>
             <div>
-              <dt>تخفیف ثابت</dt>
-              <dd id="previewDiscount"></dd>
+              <dt>مشتری</dt>
+              <dd id="previewClientMeta">مشتری</dd>
             </div>
-            <div class="grand-total">
-              <dt>مبلغ نهایی پیشنهادی</dt>
-              <dd id="previewTotal"></dd>
+            <div>
+              <dt>واحد پول</dt>
+              <dd id="previewCurrency">USD</dd>
             </div>
           </dl>
 
-          <p id="calculationMessage" class="calculation-message"></p>
-        </section>
+          <section class="doc-section preview-section" aria-labelledby="descriptionHeading">
+            <h3 id="descriptionHeading">شرح پروژه</h3>
+            <p id="previewDescription" class="preserve-lines"></p>
+          </section>
 
-        <section class="preview-section" aria-labelledby="includedHeading">
-          <h3 id="includedHeading">شامل پیشنهاد</h3>
-          <ul id="previewIncluded" class="scope-list"></ul>
-        </section>
+          <section class="doc-section preview-section" aria-labelledby="servicesHeadingPreview">
+            <h3 id="servicesHeadingPreview">خدمات پیشنهادی</h3>
 
-        <section class="preview-section" aria-labelledby="excludedHeading">
-          <h3 id="excludedHeading">خارج از پیشنهاد</h3>
-          <ul id="previewExcluded" class="scope-list"></ul>
-        </section>
+            <div class="table-scroll" tabindex="0" role="region" aria-label="جدول خدمات؛ در صفحهٔ کوچک قابل پیمایش افقی است">
+              <table>
+                <caption>جزئیات خدمات و مبالغ در واحد انتخاب‌شده</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">خدمت</th>
+                    <th scope="col">تعداد</th>
+                    <th scope="col">قیمت واحد</th>
+                    <th scope="col">مبلغ ردیف</th>
+                  </tr>
+                </thead>
+                <tbody id="previewServices"></tbody>
+              </table>
+            </div>
 
-        <dl class="delivery-details">
-          <div>
-            <dt>زمان تحویل</dt>
-            <dd id="previewDelivery"></dd>
+            <dl class="totals">
+              <div>
+                <dt>جمع خدمات</dt>
+                <dd id="previewSubtotal"></dd>
+              </div>
+              <div>
+                <dt>تخفیف ثابت</dt>
+                <dd id="previewDiscount"></dd>
+              </div>
+              <div class="grand-total">
+                <dt>مبلغ نهایی پیشنهادی</dt>
+                <dd id="previewTotal"></dd>
+              </div>
+            </dl>
+
+            <p id="calculationMessage" class="calculation-message"></p>
+          </section>
+
+          <div class="scope-grid">
+            <section class="doc-section preview-section scope-card scope-included" aria-labelledby="includedHeading">
+              <h3 id="includedHeading">
+                <span class="scope-icon" aria-hidden="true"><svg class="icon"><use href="#i-check"></use></svg></span>
+                شامل پیشنهاد
+              </h3>
+              <ul id="previewIncluded" class="scope-list"></ul>
+            </section>
+
+            <section class="doc-section preview-section scope-card scope-excluded" aria-labelledby="excludedHeading">
+              <h3 id="excludedHeading">
+                <span class="scope-icon" aria-hidden="true"><svg class="icon"><use href="#i-x"></use></svg></span>
+                خارج از پیشنهاد
+              </h3>
+              <ul id="previewExcluded" class="scope-list"></ul>
+            </section>
           </div>
-          <div>
-            <dt>دورهای بازبینی</dt>
-            <dd id="previewRevisions"></dd>
-          </div>
-        </dl>
 
-        <p class="preview-disclaimer">
-          این ابزار برای تنظیم پیشنهاد خدمات است و جایگزین قرارداد حقوقی نیست.
-          این پیشنهاد غیرالزام‌آور است و صورتحساب رسمی مالیاتی محسوب نمی‌شود.
-        </p>
+          <dl class="delivery-details">
+            <div>
+              <dt><svg class="icon" aria-hidden="true"><use href="#i-clock"></use></svg> زمان تحویل</dt>
+              <dd id="previewDelivery"></dd>
+            </div>
+            <div>
+              <dt><svg class="icon" aria-hidden="true"><use href="#i-reset"></use></svg> دورهای بازبینی</dt>
+              <dd id="previewRevisions"></dd>
+            </div>
+          </dl>
+
+          <p class="preview-disclaimer">
+            این پیشنهاد غیرالزام‌آور است و صورت‌حساب رسمی مالیاتی محسوب نمی‌شود.
+            برای تبدیل به قرارداد، متن آن باید جداگانه بررسی و تأیید شود.
+          </p>
+
+          <footer class="document-foot">
+            <span>تهیه‌شده با NoxaPlus Scope Builder</span>
+            <span lang="en" dir="ltr">noxaplus.ir</span>
+          </footer>
+        </article>
       </section>
     </div>
 
     <noscript>
-      <p class="notice">
-        برای محاسبات و پیش‌نمایش این صفحه، جاوااسکریپت مرورگر باید فعال باشد.
-      </p>
+      <p class="noscript-note">برای محاسبات و پیش‌نمایش این صفحه، جاوااسکریپت مرورگر باید فعال باشد.</p>
     </noscript>
   </main>
 
-  <footer class="container site-footer">
-    NoxaPlus Scope Builder · بدون ذخیره‌سازی یا ارسال داده به سرور
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>NoxaPlus Scope Builder · پیشنهاد شفاف، همکاری روشن</p>
+      <p class="footer-meta">
+        <span>مجوز MIT</span>
+        <span aria-hidden="true">·</span>
+        <span>فونت وزیرمتن با مجوز OFL</span>
+      </p>
+    </div>
   </footer>
+
+  <dialog id="templatesDialog" class="dialog" aria-labelledby="templatesTitle">
+    <div class="dialog-card dialog-wide">
+      <div class="dialog-head">
+        <div>
+          <p class="eyebrow"><span aria-hidden="true"></span> شروع سریع</p>
+          <h2 id="templatesTitle">یک الگو انتخاب کنید</h2>
+          <p>الگوها نقطهٔ شروع‌اند؛ نام‌ها، قیمت‌ها و محدوده را با پروژهٔ خود جایگزین کنید.</p>
+        </div>
+        <button id="closeTemplatesButton" class="icon-button" type="button" aria-label="بستن الگوها">
+          <svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
+        </button>
+      </div>
+
+      <div class="template-grid">
+        <button class="template-card" type="button" data-template="website">
+          <span class="template-icon" aria-hidden="true"><svg class="icon"><use href="#i-layers"></use></svg></span>
+          <strong>طراحی و توسعهٔ وب‌سایت</strong>
+          <span>سایت شرکتی، فروشگاه کوچک یا صفحهٔ فرود</span>
+          <span class="template-tags">۴ خدمت · ۲ دور بازبینی</span>
+          <span class="template-cta">استفاده از الگو <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span>
+        </button>
+
+        <button class="template-card" type="button" data-template="consulting">
+          <span class="template-icon" aria-hidden="true"><svg class="icon"><use href="#i-sparkles"></use></svg></span>
+          <strong>مشاوره و استراتژی</strong>
+          <span>برند، بازاریابی یا مسیر محصول</span>
+          <span class="template-tags">۳ خدمت · ۱ دور بازبینی</span>
+          <span class="template-cta">استفاده از الگو <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span>
+        </button>
+
+        <button class="template-card" type="button" data-template="support">
+          <span class="template-icon" aria-hidden="true"><svg class="icon"><use href="#i-shield"></use></svg></span>
+          <strong>پشتیبانی ماهانه</strong>
+          <span>نگهداری، به‌روزرسانی و پاسخ‌گویی</span>
+          <span class="template-tags">۳ خدمت · ۰ دور بازبینی</span>
+          <span class="template-cta">استفاده از الگو <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span>
+        </button>
+
+        <button class="template-card" type="button" data-template="sample">
+          <span class="template-icon" aria-hidden="true"><svg class="icon"><use href="#i-file"></use></svg></span>
+          <strong>نمونهٔ نمایشی کافه</strong>
+          <span>یک مثال کامل با داده‌های خیالی</span>
+          <span class="template-tags">۳ خدمت · ۲ دور بازبینی</span>
+          <span class="template-cta">استفاده از الگو <svg class="icon" aria-hidden="true"><use href="#i-arrow"></use></svg></span>
+        </button>
+      </div>
+
+      <p class="dialog-note">هیچ الگویی اطلاعات واقعی مشتری ندارد. پیش از استفاده، همهٔ متن‌ها و مبالغ را بازبینی کنید.</p>
+    </div>
+  </dialog>
+
+  <dialog id="confirmDialog" class="dialog" aria-labelledby="confirmTitle">
+    <form method="dialog" class="dialog-card dialog-compact">
+      <span class="dialog-icon" aria-hidden="true">
+        <svg class="icon"><use href="#i-info"></use></svg>
+      </span>
+      <h2 id="confirmTitle">تأیید عملیات</h2>
+      <p id="confirmMessage"></p>
+      <div class="dialog-actions">
+        <button class="button button-ghost" value="cancel" type="submit">انصراف</button>
+        <button id="confirmAccept" class="button button-danger" value="confirm" type="submit">تأیید</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden>
+    <svg class="icon toast-icon" aria-hidden="true"><use href="#i-check"></use></svg>
+    <span id="toastText"></span>
+  </div>
 </body>
 </html>

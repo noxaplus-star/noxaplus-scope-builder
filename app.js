@@ -4,12 +4,15 @@ const byId = (id) => document.getElementById(id);
 
 const form = byId("proposalForm");
 const serviceRows = byId("serviceRows");
+const workspace = byId("workspace");
 
 const fields = {
   provider: byId("provider"),
   client: byId("client"),
   project: byId("project"),
   description: byId("description"),
+  proposalNumber: byId("proposalNumber"),
+  proposalDate: byId("proposalDate"),
   currency: byId("currency"),
   discount: byId("discount"),
   included: byId("included"),
@@ -19,13 +22,18 @@ const fields = {
 };
 
 const APP_ID = "noxaplus-scope-builder";
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
+const DRAFT_KEY = "noxaplus-scope-builder:draft";
+const THEME_KEY = "noxaplus-scope-builder:theme";
 const MAX_FILE_BYTES = 1024 * 1024;
 const ALLOWED_CURRENCIES = ["USD", "USDT", "تومان"];
+const SVG_NS = "http://www.w3.org/2000/svg";
 
 let nextServiceId = 0;
-let initialFormSnapshot = "";
 let importInProgress = false;
+let autosaveTimer = null;
+let toastTimer = null;
+let confirmResolver = null;
 
 const pendingDownloadUrls = new Set();
 
@@ -43,6 +51,18 @@ function createElement(tag, className, text) {
   return element;
 }
 
+function createIcon(symbolId, className = "icon") {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  const use = document.createElementNS(SVG_NS, "use");
+
+  svg.setAttribute("class", className);
+  svg.setAttribute("aria-hidden", "true");
+  use.setAttribute("href", `#${symbolId}`);
+  svg.append(use);
+
+  return svg;
+}
+
 function normalizeNumber(value) {
   return String(value)
     .trim()
@@ -56,6 +76,13 @@ function toPersianDigits(value) {
     /[0-9]/g,
     (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]
   );
+}
+
+function formatTime(date) {
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return toPersianDigits(`${hours}:${minutes}`);
 }
 
 /*
@@ -128,6 +155,11 @@ function moneyLabel(minorUnits) {
 
 function setError(input, message) {
   const errorElement = byId(`${input.id}Error`);
+
+  if (!errorElement) {
+    return;
+  }
+
   errorElement.textContent = message;
   input.setAttribute("aria-invalid", message ? "true" : "false");
 }
@@ -138,6 +170,24 @@ function showText(id, value, emptyText) {
 
   target.textContent = text || emptyText;
   target.classList.toggle("empty", text === "");
+}
+
+function defaultDocumentDate() {
+  try {
+    return new Intl.DateTimeFormat("fa-IR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).format(new Date());
+  } catch {
+    return localDateForFilename();
+  }
+}
+
+function defaultProposalNumber() {
+  const year = normalizeNumber(defaultDocumentDate()).split("/")[0] || "1405";
+
+  return `NP-${year}-001`;
 }
 
 function createServiceField({
@@ -153,6 +203,10 @@ function createServiceField({
   const error = createElement("p", "field-error");
 
   label.htmlFor = id;
+  label.append(
+    createElement("span", "req", "*"),
+    createElement("span", "sr-only", "(الزامی)")
+  );
 
   input.id = id;
   input.name = id;
@@ -166,13 +220,24 @@ function createServiceField({
     input.inputMode = decimal ? "decimal" : "numeric";
     input.dir = "ltr";
     input.spellcheck = false;
+    input.maxLength = 24;
     input.setAttribute("aria-describedby", `${error.id} moneyPolicy`);
   } else {
     input.maxLength = 300;
     input.setAttribute("aria-describedby", error.id);
   }
 
-  wrapper.append(label, input, error);
+  let control = input;
+
+  if (decimal) {
+    control = createElement("div", "input-affix");
+    control.append(
+      input,
+      createElement("span", "currency-suffix", fields.currency.value)
+    );
+  }
+
+  wrapper.append(label, control, error);
 
   return { wrapper, input };
 }
@@ -182,31 +247,33 @@ function addService(data = {}) {
   const row = createElement("div", "service-row");
   const header = createElement("div", "service-row-header");
   const heading = createElement("h3");
-  const removeButton = createElement("button", "button danger", "حذف");
+  const rowTotal = createElement("span", "row-total");
+  const removeButton = createElement("button", "remove-row");
 
   heading.id = `service-${id}-heading`;
   row.setAttribute("role", "group");
   row.setAttribute("aria-labelledby", heading.id);
 
   removeButton.type = "button";
-  header.append(heading, removeButton);
+  removeButton.append(createIcon("i-trash"));
+  header.append(heading, rowTotal, removeButton);
 
   const description = createServiceField({
     id: `service-${id}-description`,
-    labelText: "شرح خدمت — الزامی",
+    labelText: "شرح خدمت",
     value: data.description ?? ""
   });
 
   const quantity = createServiceField({
     id: `service-${id}-quantity`,
-    labelText: "تعداد — الزامی",
+    labelText: "تعداد",
     value: data.quantity ?? "1",
     numeric: true
   });
 
   const price = createServiceField({
     id: `service-${id}-price`,
-    labelText: "قیمت واحد — الزامی",
+    labelText: "قیمت واحد",
     value: data.price ?? "",
     numeric: true,
     decimal: true
@@ -233,6 +300,7 @@ function addService(data = {}) {
     row.remove();
     renumberServices();
     render();
+    scheduleAutosave();
     focusTarget.focus();
   });
 
@@ -246,7 +314,7 @@ function renumberServices() {
     const number = toPersianDigits(index + 1);
 
     row.querySelector("h3").textContent = `خدمت ${number}`;
-    row.querySelector("button").setAttribute(
+    row.querySelector(".remove-row").setAttribute(
       "aria-label",
       `حذف خدمت ${number}`
     );
@@ -284,9 +352,7 @@ function appendServicePreview(description, quantity, price, rowTotal) {
   const quantityCell = createElement(
     "td",
     "",
-    quantity.ok
-      ? toPersianDigits(quantity.value.toString())
-      : "نامعتبر"
+    quantity.ok ? toPersianDigits(quantity.value.toString()) : "نامعتبر"
   );
 
   const priceCell = createElement(
@@ -305,13 +371,52 @@ function appendServicePreview(description, quantity, price, rowTotal) {
   byId("previewServices").append(tableRow);
 }
 
+function updateCompletion() {
+  const rows = Array.from(serviceRows.children);
+  const hasValidService = rows.some((row) => {
+    const description = row
+      .querySelector('[data-kind="description"]')
+      .value.trim();
+
+    return (
+      description !== "" &&
+      parseWholeNumber(row.querySelector('[data-kind="quantity"]').value, false)
+        .ok &&
+      parseMoney(row.querySelector('[data-kind="price"]').value).ok
+    );
+  });
+
+  const checks = [
+    fields.provider.value.trim() !== "",
+    fields.client.value.trim() !== "",
+    fields.project.value.trim() !== "",
+    fields.proposalNumber.value.trim() !== "",
+    fields.proposalDate.value.trim() !== "",
+    fields.description.value.trim() !== "",
+    hasValidService,
+    fields.included.value.trim() !== "",
+    fields.excluded.value.trim() !== "",
+    fields.delivery.value.trim() !== ""
+  ];
+
+  const percent = Math.round(
+    (checks.filter(Boolean).length / checks.length) * 100
+  );
+
+  byId("completionValue").textContent = `${toPersianDigits(percent)}٪`;
+  byId("completionBar").style.width = `${percent}%`;
+  byId("completionMeter").setAttribute("aria-valuenow", String(percent));
+}
+
 function render() {
   let hasFormErrors = false;
 
   const requiredTextFields = [
     [fields.provider, "نام ارائه‌دهنده یا برند را وارد کنید."],
     [fields.client, "نام مشتری را وارد کنید."],
-    [fields.project, "عنوان پروژه را وارد کنید."]
+    [fields.project, "عنوان پروژه را وارد کنید."],
+    [fields.proposalNumber, "شمارهٔ پیشنهاد را وارد کنید."],
+    [fields.proposalDate, "تاریخ صدور را وارد کنید."]
   ];
 
   requiredTextFields.forEach(([input, message]) => {
@@ -330,6 +435,8 @@ function render() {
   );
   showText("previewClient", fields.client.value, "مشتری مشخص نشده");
   showText("previewProject", fields.project.value, "عنوان پروژه مشخص نشده");
+  showText("previewProposalNumber", fields.proposalNumber.value, "—");
+  showText("previewProposalDate", fields.proposalDate.value, "—");
   showText(
     "previewDescription",
     fields.description.value,
@@ -340,6 +447,15 @@ function render() {
     fields.delivery.value,
     "زمان تحویل مشخص نشده"
   );
+
+  byId("previewProviderMeta").textContent =
+    fields.provider.value.trim() || "—";
+  byId("previewClientMeta").textContent = fields.client.value.trim() || "—";
+  byId("previewCurrency").textContent = fields.currency.value;
+
+  document.querySelectorAll(".currency-suffix").forEach((suffix) => {
+    suffix.textContent = fields.currency.value;
+  });
 
   renderList(
     "previewIncluded",
@@ -419,6 +535,9 @@ function render() {
       servicesFinanciallyValid = false;
     }
 
+    row.querySelector(".row-total").textContent =
+      rowTotal === null ? "" : moneyLabel(rowTotal);
+
     appendServicePreview(description, quantity, price, rowTotal);
   });
 
@@ -484,6 +603,17 @@ function render() {
     status.textContent = statusText;
   }
 
+  const emptyDocument =
+    fields.client.value.trim() === "" &&
+    fields.project.value.trim() === "" &&
+    !rows.some(
+      (row) =>
+        row.querySelector('[data-kind="description"]').value.trim() !== ""
+    );
+
+  byId("documentEmptyHint").hidden = !emptyDocument;
+
+  updateCompletion();
   updatePrintSections();
 
   return !incomplete;
@@ -494,6 +624,9 @@ function loadData(data) {
   fields.client.value = data.client ?? "";
   fields.project.value = data.project ?? "";
   fields.description.value = data.description ?? "";
+  fields.proposalNumber.value =
+    data.proposalNumber || defaultProposalNumber();
+  fields.proposalDate.value = data.proposalDate || defaultDocumentDate();
   fields.currency.value = data.currency ?? "USD";
   fields.discount.value = data.discount ?? "0";
   fields.included.value = data.included ?? "";
@@ -511,123 +644,252 @@ function loadData(data) {
   render();
 }
 
-/* JSON file interface */
+/* Theme */
 
-function setupFileInterface() {
-  const actions = byId("sampleButton").parentElement;
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
 
-  const exportButton = createElement(
-    "button",
-    "button secondary",
-    "ذخیره پیشنهاد"
-  );
-  exportButton.id = "exportButton";
-  exportButton.type = "button";
-  exportButton.setAttribute("aria-describedby", "filePrivacyHelp");
+  const toggle = byId("themeToggle");
+  const isDark = theme === "dark";
 
-  const importButton = createElement(
-    "button",
-    "button secondary",
-    "باز کردن پیشنهاد"
-  );
-  importButton.id = "importButton";
-  importButton.type = "button";
-  importButton.setAttribute("aria-describedby", "filePrivacyHelp");
-
-  actions.prepend(exportButton, importButton);
-
-  const fileInput = document.createElement("input");
-  fileInput.id = "proposalFile";
-  fileInput.type = "file";
-  fileInput.accept = ".json,application/json";
-  fileInput.hidden = true;
-  fileInput.tabIndex = -1;
-  fileInput.setAttribute("aria-label", "انتخاب فایل JSON پیشنهاد");
-
-  const information = createElement("div", "info-box");
-  information.id = "filePrivacyHelp";
-
-  information.append(
-    createElement(
-      "p",
-      "",
-      "ذخیره پیشنهاد، یک فایل JSON روی دستگاه شما دانلود می‌کند. این فایل شامل اطلاعات مشتری و قیمت‌گذاری است؛ آن را فقط با افراد مورد اعتماد به اشتراک بگذارید."
-    ),
-    createElement(
-      "p",
-      "",
-      "صفحه ذخیرهٔ خودکار ندارد. پس از هر ویرایش، برای نگهداری نسخهٔ جدید دوباره «ذخیره پیشنهاد» را بزنید. هیچ داده‌ای به سرور ارسال نمی‌شود."
-    ),
-    createElement(
-      "p",
-      "",
-      "برای باز کردن پیشنهاد، فایل JSON همین برنامه را انتخاب کنید. حداکثر حجم مجاز ۱ MiB، برابر با ۱٬۰۴۸٬۵۷۶ بایت است."
-    )
+  toggle.setAttribute("aria-pressed", String(isDark));
+  toggle.setAttribute(
+    "aria-label",
+    isDark ? "تغییر به حالت روشن" : "تغییر به حالت تاریک"
   );
 
-  const message = createElement("p");
-  message.id = "fileMessage";
-  message.hidden = true;
-  message.setAttribute("role", "status");
-  message.setAttribute("aria-live", "polite");
-  message.setAttribute("aria-atomic", "true");
+  byId("themeColorMeta").setAttribute(
+    "content",
+    isDark ? "#0b0f17" : "#f5f4f1"
+  );
+}
 
-  const controls = createElement("div");
-  controls.append(fileInput, information, message);
-  form.before(controls);
+function setupThemeToggle() {
+  applyTheme(document.documentElement.getAttribute("data-theme") || "light");
 
-  const milestone = document.querySelector(".milestone");
-  if (milestone) {
-    milestone.textContent = "مرحلهٔ ۳ · JSON و چاپ / PDF";
-  }
+  byId("themeToggle").addEventListener("click", () => {
+    const next =
+      document.documentElement.getAttribute("data-theme") === "dark"
+        ? "light"
+        : "dark";
 
-  const noticeParagraphs = document.querySelectorAll(".notice p");
-  if (noticeParagraphs[1]) {
-    noticeParagraphs[1].textContent =
-      "خروجی، پیشنهاد غیرالزام‌آور خدمات است؛ قرارداد یا صورتحساب رسمی مالیاتی نیست. صفحه ذخیرهٔ خودکار ندارد و اطلاعات پس از تازه‌سازی بازیابی نمی‌شوند؛ برای نگهداری ورودی‌های قابل‌ویرایش، فایل JSON بگیرید.";
-  }
+    applyTheme(next);
 
-  const footer = document.querySelector(".site-footer");
-  if (footer) {
-    footer.textContent =
-      "NoxaPlus Scope Builder · ذخیرهٔ دستی JSON و چاپ مرورگر · بدون ذخیرهٔ خودکار یا ارسال داده به سرور";
-  }
-
-  exportButton.addEventListener("click", exportProposal);
-
-  importButton.addEventListener("click", () => {
-    if (importInProgress) {
-      return;
-    }
-
-    // Clearing the value allows selecting the same file again.
-    fileInput.value = "";
-    fileInput.click();
-  });
-
-  fileInput.addEventListener("change", () => {
-    const file = fileInput.files?.[0];
-
-    // Keep the File reference, but clear the input for future selections.
-    fileInput.value = "";
-
-    if (file) {
-      importProposal(file);
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch {
+      // Theme still applies for this page view.
     }
   });
 }
 
-function showFileMessage(message, isError = false) {
+/* Mobile editor/preview tabs */
+
+function switchView(view) {
+  workspace.dataset.view = view;
+
+  [
+    [byId("viewEditorTab"), "editor"],
+    [byId("viewPreviewTab"), "preview"]
+  ].forEach(([tab, tabView]) => {
+    const active = tabView === view;
+
+    tab.classList.toggle("is-active", active);
+    tab.setAttribute("aria-selected", String(active));
+  });
+
+  if (view === "preview") {
+    render();
+  }
+}
+
+function setupViewSwitcher() {
+  const tabs = [byId("viewEditorTab"), byId("viewPreviewTab")];
+
+  tabs[0].addEventListener("click", () => switchView("editor"));
+  tabs[1].addEventListener("click", () => switchView("preview"));
+
+  tabs.forEach((tab, index) => {
+    tab.addEventListener("keydown", (event) => {
+      let targetIndex = null;
+
+      if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+        targetIndex = index === 0 ? 1 : 0;
+      } else if (event.key === "Home") {
+        targetIndex = 0;
+      } else if (event.key === "End") {
+        targetIndex = 1;
+      }
+
+      if (targetIndex === null) {
+        return;
+      }
+
+      event.preventDefault();
+      tabs[targetIndex].focus();
+      switchView(targetIndex === 0 ? "editor" : "preview");
+    });
+  });
+}
+
+/* Feedback */
+
+function showFileMessage(message, tone = "valid") {
   const target = byId("fileMessage");
+
   target.hidden = false;
-  target.className = `status ${isError ? "is-invalid" : "is-valid"}`;
+  target.className = `inline-message is-${tone}`;
   target.textContent = message;
 }
+
+function hideFileMessage() {
+  byId("fileMessage").hidden = true;
+}
+
+function showPrintMessage(message, tone = "valid") {
+  const target = byId("printMessage");
+
+  target.hidden = false;
+  target.className = `inline-message is-${tone}`;
+  target.textContent = message;
+}
+
+function showToast(message, isError = false) {
+  const toast = byId("toast");
+
+  window.clearTimeout(toastTimer);
+  byId("toastText").textContent = message;
+  toast.classList.toggle("is-error", isError);
+  toast.hidden = false;
+
+  toastTimer = window.setTimeout(() => {
+    toast.hidden = true;
+  }, 3200);
+}
+
+/* Autosave */
+
+function setAutosaveState(state, text) {
+  const status = byId("autosaveStatus");
+
+  status.classList.toggle("is-saving", state === "saving");
+  status.classList.toggle("is-error", state === "error");
+  byId("autosaveText").textContent = text;
+}
+
+function saveDraft() {
+  window.clearTimeout(autosaveTimer);
+  autosaveTimer = null;
+
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(collectProposal()));
+    setAutosaveState("saved", `ذخیره شد · ${formatTime(new Date())}`);
+  } catch {
+    setAutosaveState(
+      "error",
+      "ذخیرهٔ خودکار ممکن نشد؛ برای نگهداری نسخه، JSON بگیرید."
+    );
+  }
+}
+
+function scheduleAutosave() {
+  setAutosaveState("saving", "در حال ذخیره…");
+  window.clearTimeout(autosaveTimer);
+  autosaveTimer = window.setTimeout(saveDraft, 350);
+}
+
+function safeString(value, fallback, maxLength) {
+  return typeof value === "string" ? value.slice(0, maxLength) : fallback;
+}
+
+function normalizeDraft(raw) {
+  if (!isRecord(raw) || raw.appId !== APP_ID) {
+    return null;
+  }
+
+  const version = raw.schemaVersion === 1 ? 1 : 2;
+
+  const services = Array.isArray(raw.services)
+    ? raw.services.slice(0, 100).filter(isRecord).map((service) => ({
+        description: safeString(service.description, "", 300),
+        quantity: safeString(service.quantity, "1", 24),
+        unitPrice: safeString(service.unitPrice, "", 24)
+      }))
+    : [];
+
+  if (services.length === 0) {
+    services.push({ description: "", quantity: "1", unitPrice: "" });
+  }
+
+  const currency = ALLOWED_CURRENCIES.includes(raw.currency)
+    ? raw.currency
+    : "USD";
+
+  return {
+    appId: APP_ID,
+    schemaVersion: SCHEMA_VERSION,
+    proposalNumber:
+      version === 2
+        ? safeString(raw.proposalNumber, "", 60)
+        : defaultProposalNumber(),
+    proposalDate:
+      version === 2
+        ? safeString(raw.proposalDate, "", 40)
+        : defaultDocumentDate(),
+    provider: safeString(raw.provider, "NoxaPlus", 120),
+    client: safeString(raw.client, "", 120),
+    title: safeString(raw.title, "", 180),
+    description: safeString(raw.description, "", 2000),
+    currency,
+    services,
+    fixedDiscount: safeString(raw.fixedDiscount, "0", 24),
+    includedWork: safeString(raw.includedWork, "", 5000),
+    excludedWork: safeString(raw.excludedWork, "", 5000),
+    deliveryTime: safeString(raw.deliveryTime, "", 250),
+    revisionRounds: safeString(raw.revisionRounds, "0", 24)
+  };
+}
+
+function restoreDraft() {
+  let stored;
+
+  try {
+    stored = localStorage.getItem(DRAFT_KEY);
+  } catch {
+    return false;
+  }
+
+  if (!stored) {
+    return false;
+  }
+
+  let draft;
+
+  try {
+    draft = normalizeDraft(JSON.parse(stored));
+  } catch {
+    draft = null;
+  }
+
+  if (!draft) {
+    return false;
+  }
+
+  loadData(proposalToFormData(draft));
+  byId("restoreBanner").hidden = false;
+  setAutosaveState("saved", "پیش‌نویس بازیابی شد");
+
+  return true;
+}
+
+/* JSON file interface */
 
 function collectProposal() {
   return {
     appId: APP_ID,
     schemaVersion: SCHEMA_VERSION,
+    proposalNumber: fields.proposalNumber.value,
+    proposalDate: fields.proposalDate.value,
     provider: fields.provider.value,
     client: fields.client.value,
     title: fields.project.value,
@@ -696,14 +958,31 @@ function validateProposal(data) {
     failValidation("این فایل متعلق به NoxaPlus Scope Builder نیست.");
   }
 
-  if (
-    !hasOwn(data, "schemaVersion") ||
-    data.schemaVersion !== SCHEMA_VERSION
-  ) {
+  const version = data.schemaVersion;
+
+  if (version !== 1 && version !== SCHEMA_VERSION) {
     failValidation(
-      "نسخهٔ ساختار فایل پشتیبانی نمی‌شود؛ فقط schemaVersion با مقدار عددی ۱ پذیرفته می‌شود."
+      "نسخهٔ ساختار فایل پشتیبانی نمی‌شود؛ فقط schemaVersion ۱ یا ۲ پذیرفته می‌شود."
     );
   }
+
+  const proposalNumber =
+    version === SCHEMA_VERSION
+      ? requireString(data, "proposalNumber", "شمارهٔ پیشنهاد", {
+          maxLength: 60,
+          required: true,
+          singleLine: true
+        })
+      : defaultProposalNumber();
+
+  const proposalDate =
+    version === SCHEMA_VERSION
+      ? requireString(data, "proposalDate", "تاریخ صدور", {
+          maxLength: 40,
+          required: true,
+          singleLine: true
+        })
+      : defaultDocumentDate();
 
   const provider = requireString(data, "provider", "ارائه‌دهنده", {
     maxLength: 120,
@@ -848,6 +1127,8 @@ function validateProposal(data) {
   return {
     appId: APP_ID,
     schemaVersion: SCHEMA_VERSION,
+    proposalNumber,
+    proposalDate,
     provider,
     client,
     title,
@@ -868,6 +1149,8 @@ function proposalToFormData(proposal) {
     client: proposal.client,
     project: proposal.title,
     description: proposal.description,
+    proposalNumber: proposal.proposalNumber,
+    proposalDate: proposal.proposalDate,
     currency: proposal.currency,
     services: proposal.services.map((service) => ({
       description: service.description,
@@ -882,8 +1165,20 @@ function proposalToFormData(proposal) {
   };
 }
 
-function currentFormContainsInformation() {
-  return JSON.stringify(collectProposal()) !== initialFormSnapshot;
+function formHasMeaningfulContent() {
+  return (
+    fields.client.value.trim() !== "" ||
+    fields.project.value.trim() !== "" ||
+    fields.description.value.trim() !== "" ||
+    fields.included.value.trim() !== "" ||
+    fields.excluded.value.trim() !== "" ||
+    fields.delivery.value.trim() !== "" ||
+    Array.from(serviceRows.children).some(
+      (row) =>
+        row.querySelector('[data-kind="description"]').value.trim() !== "" ||
+        row.querySelector('[data-kind="price"]').value.trim() !== ""
+    )
+  );
 }
 
 function localDateForFilename() {
@@ -939,8 +1234,9 @@ function exportProposal() {
     link.click();
 
     showFileMessage(
-      "درخواست دانلود فایل JSON به مرورگر ارسال شد. فایل شامل اطلاعات مشتری و قیمت‌هاست. پس از تغییر پیشنهاد، دوباره خروجی بگیرید."
+      "درخواست دانلود فایل JSON به مرورگر ارسال شد. فایل شامل اطلاعات مشتری و قیمت‌هاست."
     );
+    showToast("فایل JSON با همهٔ ورودی‌های قابل‌ویرایش آماده شد.");
 
     const downloadUrl = url;
     window.setTimeout(() => releaseDownloadUrl(downloadUrl), 60000);
@@ -953,9 +1249,10 @@ function exportProposal() {
       `ذخیره انجام نشد: ${
         error instanceof Error ? error.message : "خطای نامشخص رخ داد."
       }`,
-      true
+      "error"
     );
 
+    switchView("editor");
     form.querySelector('[aria-invalid="true"]')?.focus();
   } finally {
     link?.remove();
@@ -1014,19 +1311,23 @@ async function importProposal(file) {
   importButton.disabled = true;
   importButton.setAttribute("aria-busy", "true");
 
-  showFileMessage("در حال خواندن و بررسی فایل؛ اطلاعات فرم هنوز تغییر نکرده است.");
+  showFileMessage("در حال خواندن و بررسی فایل؛ اطلاعات فرم هنوز تغییر نکرده است.", "info");
 
   try {
     const proposal = await readAndValidateProposal(file);
 
-    if (currentFormContainsInformation()) {
-      const confirmed = window.confirm(
-        "باز کردن این فایل، اطلاعات فعلی فرم را جایگزین می‌کند. اگر نسخهٔ فعلی را لازم دارید، ابتدا لغو کنید و «ذخیره پیشنهاد» را بزنید. اطلاعات فعلی جایگزین شود؟"
-      );
+    if (formHasMeaningfulContent()) {
+      const confirmed = await askConfirm({
+        title: "جایگزینی اطلاعات فرم",
+        message:
+          "باز کردن این فایل، اطلاعات فعلی فرم را جایگزین می‌کند. اطلاعات فعلی جایگزین شود؟",
+        acceptLabel: "جایگزین کن"
+      });
 
       if (!confirmed) {
         showFileMessage(
-          "باز کردن پیشنهاد لغو شد؛ اطلاعات فعلی فرم بدون تغییر باقی ماند."
+          "باز کردن پیشنهاد لغو شد؛ اطلاعات فعلی بدون تغییر باقی ماند.",
+          "info"
         );
         return;
       }
@@ -1043,17 +1344,18 @@ async function importProposal(file) {
       );
     }
 
+    scheduleAutosave();
     showFileMessage(
-      "پیشنهاد با موفقیت باز شد و مبالغ از ورودی‌ها دوباره محاسبه شدند. صفحه ذخیرهٔ خودکار ندارد؛ پس از ویرایش دوباره خروجی بگیرید."
+      "پیشنهاد با موفقیت باز شد و مبالغ از ورودی‌ها دوباره محاسبه شدند."
     );
-
-    fields.client.focus();
+    showToast("پیشنهاد از فایل JSON باز شد.");
+    switchView("editor");
   } catch (error) {
     showFileMessage(
       `باز کردن انجام نشد: ${
         error instanceof Error ? error.message : "خطای نامشخص رخ داد."
       } اطلاعات فعلی فرم حفظ شد.`,
-      true
+      "error"
     );
   } finally {
     importInProgress = false;
@@ -1063,48 +1365,6 @@ async function importProposal(file) {
 }
 
 /* Browser printing */
-
-function setupPrintInterface() {
-  const actions = byId("sampleButton").parentElement;
-
-  const printButton = createElement(
-    "button",
-    "button secondary",
-    "چاپ / ذخیره PDF"
-  );
-
-  printButton.id = "printButton";
-  printButton.type = "button";
-  printButton.setAttribute("aria-describedby", "printHelp");
-
-  actions.insertBefore(printButton, byId("sampleButton"));
-
-  const printHelp = createElement("div", "info-box print-help");
-  printHelp.id = "printHelp";
-
-  printHelp.append(
-    createElement(
-      "p",
-      "",
-      "برای دریافت PDF، در پنجره چاپ گزینه Save as PDF را انتخاب کنید."
-    ),
-    createElement(
-      "p",
-      "",
-      "سربرگ و پابرگ خودکار مرورگر، مانند تاریخ، آدرس فایل و شمارهٔ صفحه، از تنظیمات چاپ مرورگر کنترل می‌شوند؛ CSS برنامه نمی‌تواند حذف آن‌ها را به‌طور قابل‌اعتماد تضمین کند."
-    ),
-    createElement(
-      "p",
-      "",
-      "PDF برای نمایش پیشنهاد است؛ برای باز کردن و ویرایش دوبارهٔ ورودی‌ها، از «ذخیره پیشنهاد» و فایل JSON استفاده کنید."
-    )
-  );
-
-  // Keep guidance immediately below the action area.
-  actions.parentElement.after(printHelp);
-
-  printButton.addEventListener("click", printProposal);
-}
 
 function updatePrintSections() {
   const optionalSections = [
@@ -1123,13 +1383,6 @@ function updatePrintSections() {
     "print-empty",
     fields.delivery.value.trim() === ""
   );
-}
-
-function showPrintMessage(message, isError = false) {
-  const target = byId("printMessage");
-  target.hidden = false;
-  target.className = `status ${isError ? "is-invalid" : "is-valid"}`;
-  target.textContent = message;
 }
 
 function printProposal() {
@@ -1157,23 +1410,337 @@ function printProposal() {
       `چاپ انجام نشد: ${
         error instanceof Error ? error.message : "خطای نامشخص رخ داد."
       }`,
-      true
+      "error"
     );
 
+    switchView("editor");
     form.querySelector('[aria-invalid="true"]')?.focus();
   }
 }
 
-function setupPrintMessage() {
-  const message = createElement("p");
-  message.id = "printMessage";
-  message.hidden = true;
-  message.setAttribute("role", "status");
-  message.setAttribute("aria-live", "polite");
-  message.setAttribute("aria-atomic", "true");
+/* Confirmation dialog */
 
-  byId("printHelp").after(message);
+function askConfirm({ title, message, acceptLabel = "تأیید" }) {
+  const dialog = byId("confirmDialog");
+
+  if (confirmResolver || dialog.open) {
+    return Promise.resolve(false);
+  }
+
+  byId("confirmTitle").textContent = title;
+  byId("confirmMessage").textContent = message;
+  byId("confirmAccept").textContent = acceptLabel;
+
+  dialog.returnValue = "cancel";
+  dialog.showModal();
+
+  return new Promise((resolve) => {
+    confirmResolver = resolve;
+  });
 }
+
+function setupConfirmDialog() {
+  const dialog = byId("confirmDialog");
+
+  dialog.addEventListener("close", () => {
+    const confirmed = dialog.returnValue === "confirm";
+    const resolver = confirmResolver;
+
+    confirmResolver = null;
+    resolver?.(confirmed);
+  });
+
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) {
+      dialog.close("cancel");
+    }
+  });
+}
+
+/* Templates */
+
+const TEMPLATES = {
+  website: {
+    provider: "NoxaPlus",
+    client: "شرکت نمونهٔ آفتاب",
+    project: "طراحی و توسعهٔ وب‌سایت شرکتی",
+    description:
+      "طراحی یک وب‌سایت شرکتی سریع و واکنش‌گرا برای معرفی خدمات، نمونه‌کارها و راه‌های ارتباطی. محتوای نهایی توسط مشتری تأمین می‌شود.",
+    currency: "USD",
+    discount: "0",
+    services: [
+      { description: "کشف نیاز و معماری اطلاعات", quantity: "1", price: "180" },
+      { description: "طراحی رابط کاربری صفحات اصلی", quantity: "4", price: "95" },
+      { description: "پیاده‌سازی واکنش‌گرا و دسترس‌پذیر", quantity: "1", price: "850" },
+      { description: "آزمون، انتشار و آموزش کوتاه", quantity: "1", price: "220" }
+    ],
+    included:
+      "طراحی صفحات اصلی بر اساس محتوای نهایی\nپیاده‌سازی نسخهٔ موبایل و دسکتاپ\nانتشار روی فضای میزبانی مشتری\nیک جلسهٔ آموزش کوتاه",
+    excluded:
+      "تولید متن، عکس یا ویدیو\nدامنه، میزبانی و هزینهٔ سرویس‌های شخص ثالث\nیکپارچه‌سازی با سامانه‌های داخلی مشتری",
+    delivery: "۳ هفته کاری پس از تأیید محدوده و دریافت محتوا",
+    revisions: "2"
+  },
+  consulting: {
+    provider: "NoxaPlus",
+    client: "کسب‌وکار نمونهٔ مسیر",
+    project: "مشاورهٔ استراتژی برند و بازاریابی",
+    description:
+      "همراهی برای روشن‌کردن جایگاه برند، مخاطب اصلی و مسیر اجرای سه‌ماههٔ بازاریابی.",
+    currency: "USD",
+    discount: "0",
+    services: [
+      { description: "کارگاه تعریف مسئله و اهداف", quantity: "1", price: "250" },
+      { description: "تحلیل رقبا و مخاطب", quantity: "1", price: "320" },
+      { description: "گزارش استراتژی و نقشهٔ اجرا", quantity: "1", price: "480" }
+    ],
+    included:
+      "دو جلسهٔ کارگاه آنلاین\nتحلیل محدود رقبا و مخاطب\nگزارش استراتژی و نقشهٔ اجرای سه‌ماهه",
+    excluded:
+      "اجرای کمپین یا تولید محتوا\nخرید رسانه و تبلیغات\nتحقیقات میدانی گسترده",
+    delivery: "۱۰ روز کاری پس از تأیید محدوده",
+    revisions: "1"
+  },
+  support: {
+    provider: "NoxaPlus",
+    client: "فروشگاه نمونهٔ رون",
+    project: "پشتیبانی و نگهداری ماهانهٔ وب‌سایت",
+    description:
+      "نگهداری دوره‌ای، به‌روزرسانی امنیتی و پاسخ‌گویی به درخواست‌های فنی وب‌سایت در یک بازهٔ ماهانه.",
+    currency: "USD",
+    discount: "0",
+    services: [
+      { description: "پایش و به‌روزرسانی ماهانه", quantity: "1", price: "240" },
+      { description: "پشتیبانی فنی تا ۱۰ ساعت", quantity: "1", price: "350" },
+      { description: "گزارش ماهانه و جلسهٔ بازبینی", quantity: "1", price: "120" }
+    ],
+    included:
+      "به‌روزرسانی امنیتی و پشتیبان‌گیری دوره‌ای\nپاسخ‌گویی به درخواست‌های فنی در ساعات کاری\nگزارش ماهانهٔ وضعیت",
+    excluded:
+      "توسعهٔ قابلیت‌های جدید\nمدیریت محتوا و تولید متن\nسرویس‌های شخص ثالث و هزینهٔ آن‌ها",
+    delivery: "شروع از ابتدای ماه پس از تأیید",
+    revisions: "0"
+  },
+  sample: {
+    provider: "NoxaPlus",
+    client: "کافهٔ خیالی سپیدار",
+    project: "طراحی بستهٔ محتوای شبکه‌های اجتماعی",
+    description:
+      "آماده‌سازی یک بستهٔ محتوایی برای معرفی منوی جدید یک کافهٔ خیالی.",
+    currency: "USD",
+    discount: "20",
+    services: [
+      { description: "طراحی پست ثابت", quantity: "6", price: "25" },
+      { description: "طراحی استوری", quantity: "4", price: "12.50" },
+      { description: "جلسهٔ هماهنگی و برنامه‌ریزی", quantity: "1", price: "40" }
+    ],
+    included:
+      "طراحی بر اساس هویت بصری ارائه‌شده توسط مشتری\nتحویل فایل‌های نهایی تصویری\nآماده‌سازی متن کوتاه برای هر پست",
+    excluded:
+      "عکاسی و فیلم‌برداری\nمدیریت حساب شبکهٔ اجتماعی\nهزینهٔ تبلیغات و خرید تصاویر",
+    delivery: "۷ روز کاری پس از تأیید محدوده و دریافت محتوا",
+    revisions: "2"
+  }
+};
+
+function applyTemplate(template) {
+  const meta = {
+    proposalNumber: fields.proposalNumber.value,
+    proposalDate: fields.proposalDate.value
+  };
+
+  loadData({ ...template, ...meta });
+  scheduleAutosave();
+  switchView("editor");
+  showToast("الگو اعمال شد؛ نام‌ها و مبالغ را با پروژهٔ خود جایگزین کنید.");
+}
+
+function setupTemplates() {
+  const dialog = byId("templatesDialog");
+
+  byId("templatesButton").addEventListener("click", () => {
+    if (!dialog.open) {
+      dialog.showModal();
+    }
+  });
+
+  byId("emptyTemplateButton").addEventListener("click", () => {
+    if (!dialog.open) {
+      dialog.showModal();
+    }
+  });
+
+  byId("closeTemplatesButton").addEventListener("click", () => {
+    dialog.close();
+  });
+
+  dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) {
+      dialog.close();
+    }
+  });
+
+  dialog.querySelectorAll("[data-template]").forEach((card) => {
+    card.addEventListener("click", async () => {
+      const template = TEMPLATES[card.dataset.template];
+
+      if (!template) {
+        return;
+      }
+
+      dialog.close();
+
+      if (formHasMeaningfulContent()) {
+        const confirmed = await askConfirm({
+          title: "اعمال الگو",
+          message:
+            "با اعمال این الگو، اطلاعات فعلی فرم جایگزین می‌شود. ادامه می‌دهید؟",
+          acceptLabel: "اعمال کن"
+        });
+
+        if (!confirmed) {
+          return;
+        }
+      }
+
+      applyTemplate(template);
+    });
+  });
+}
+
+/* Draft banner */
+
+function setupDraftActions() {
+  const newProposal = async () => {
+    const confirmed = await askConfirm({
+      title: "شروع پیشنهاد تازه",
+      message:
+        "فرم به حالت اولیه برمی‌گردد و پیش‌نویس قبلی از این مرورگر پاک می‌شود. ادامه می‌دهید؟",
+      acceptLabel: "شروع تازه"
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    window.clearTimeout(autosaveTimer);
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // The form can still be reset if storage is unavailable.
+    }
+
+    loadData({});
+    byId("restoreBanner").hidden = true;
+    showToast("پیشنهاد تازه شروع شد.");
+    fields.client.focus();
+    scheduleAutosave();
+  };
+
+  byId("newProposalButton").addEventListener("click", newProposal);
+
+  byId("clearDraftButton").addEventListener("click", async () => {
+    const confirmed = await askConfirm({
+      title: "پاک کردن نسخهٔ ذخیره‌شده",
+      message:
+        "نسخهٔ ذخیره‌شده در این مرورگر پاک شود؟ اطلاعات فعلی فرم تا ویرایش بعدی پاک نمی‌شود.",
+      acceptLabel: "پاک کن"
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    window.clearTimeout(autosaveTimer);
+
+    try {
+      localStorage.removeItem(DRAFT_KEY);
+      setAutosaveState("saved", "نسخهٔ ذخیره‌شده پاک شد");
+      byId("restoreBanner").hidden = true;
+      showToast("نسخهٔ ذخیره‌شده از این مرورگر پاک شد.");
+    } catch {
+      showToast("پاک کردن نسخهٔ ذخیره‌شده ممکن نشد.", true);
+    }
+  });
+}
+
+/* Existing form actions */
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+});
+
+form.addEventListener("input", () => {
+  render();
+  scheduleAutosave();
+});
+
+form.addEventListener("change", () => {
+  render();
+  scheduleAutosave();
+});
+
+byId("addServiceButton").addEventListener("click", () => {
+  const newDescriptionInput = addService();
+
+  render();
+  scheduleAutosave();
+  newDescriptionInput.focus();
+});
+
+byId("exportButton").addEventListener("click", exportProposal);
+
+byId("importButton").addEventListener("click", () => {
+  if (importInProgress) {
+    return;
+  }
+
+  // Clearing the value allows selecting the same file again.
+  byId("proposalFile").value = "";
+  byId("proposalFile").click();
+});
+
+byId("proposalFile").addEventListener("change", () => {
+  const file = byId("proposalFile").files?.[0];
+
+  // Keep the File reference, but clear the input for future selections.
+  byId("proposalFile").value = "";
+
+  if (file) {
+    importProposal(file);
+  }
+});
+
+byId("printButton").addEventListener("click", printProposal);
+byId("previewPrintButton").addEventListener("click", printProposal);
+
+byId("resetButton").addEventListener("click", async () => {
+  const confirmed = await askConfirm({
+    title: "بازنشانی فرم",
+    message:
+      "تمام اطلاعات فعلی پاک و فرم به حالت اولیه برگردانده شود؟ این کار قابل بازگشت نیست.",
+    acceptLabel: "بازنشانی کن"
+  });
+
+  if (!confirmed) {
+    return;
+  }
+
+  window.clearTimeout(autosaveTimer);
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    // The form can still be reset if storage is unavailable.
+  }
+
+  loadData({});
+  byId("restoreBanner").hidden = true;
+  hideFileMessage();
+  showToast("فرم بازنشانی شد.");
+  switchView("editor");
+  fields.provider.focus();
+  scheduleAutosave();
+});
 
 // Also refresh the preview for browser-menu printing.
 // This event does not itself open the print dialog.
@@ -1189,73 +1756,12 @@ window.addEventListener("pagehide", () => {
   pendingDownloadUrls.clear();
 });
 
-/* Existing form actions */
+setupThemeToggle();
+setupViewSwitcher();
+setupConfirmDialog();
+setupTemplates();
+setupDraftActions();
 
-form.addEventListener("submit", (event) => {
-  event.preventDefault();
-});
-
-form.addEventListener("input", render);
-form.addEventListener("change", render);
-
-byId("addServiceButton").addEventListener("click", () => {
-  const newDescriptionInput = addService();
-  render();
-  newDescriptionInput.focus();
-});
-
-byId("sampleButton").addEventListener("click", () => {
-  loadData({
-    provider: "NoxaPlus",
-    client: "کافهٔ خیالی سپیدار",
-    project: "طراحی بستهٔ محتوای شبکه‌های اجتماعی",
-    description:
-      "آماده‌سازی یک بستهٔ محتوایی برای معرفی منوی جدید یک کافهٔ خیالی.",
-    currency: "USD",
-    discount: "20",
-    services: [
-      {
-        description: "طراحی پست ثابت",
-        quantity: "6",
-        price: "25"
-      },
-      {
-        description: "طراحی استوری",
-        quantity: "4",
-        price: "12.50"
-      },
-      {
-        description: "جلسهٔ هماهنگی و برنامه‌ریزی",
-        quantity: "1",
-        price: "40"
-      }
-    ],
-    included:
-      "طراحی بر اساس هویت بصری ارائه‌شده توسط مشتری\nتحویل فایل‌های نهایی تصویری\nآماده‌سازی متن کوتاه برای هر پست",
-    excluded:
-      "عکاسی و فیلم‌برداری\nمدیریت حساب شبکهٔ اجتماعی\nهزینهٔ تبلیغات و خرید تصاویر",
-    delivery: "۷ روز کاری پس از تأیید محدوده و دریافت محتوا",
-    revisions: "2"
-  });
-
-  fields.client.focus();
-});
-
-byId("resetButton").addEventListener("click", () => {
-  const confirmed = window.confirm(
-    "تمام اطلاعات فعلی پاک و فرم به حالت اولیه برگردانده شود؟ این کار قابل بازگشت نیست."
-  );
-
-  if (!confirmed) {
-    return;
-  }
-
+if (!restoreDraft()) {
   loadData({});
-  fields.provider.focus();
-});
-
-setupFileInterface();
-setupPrintInterface();
-setupPrintMessage();
-loadData({});
-initialFormSnapshot = JSON.stringify(collectProposal());
+}

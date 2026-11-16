@@ -1,11 +1,11 @@
 # Manual test checklist
 
 Project: NoxaPlus Scope Builder  
-Documentation baseline: 0.1.0  
-Recorded: 2026-10-26
+Documentation baseline: 0.2.0  
+Recorded: 2026-10-26, updated for 0.2.0 on 2026-11-16
 
-This document records manual testing only. No automated test suite is included,
-and no automated test execution is claimed.
+This document records manual testing only. No automated test suite is included
+in the repository, and no automated test execution is claimed here.
 
 ## A. Checks reported as passed by the user
 
@@ -25,6 +25,12 @@ Browser name, version, operating system, device, and exact test inputs were
 not recorded with these reports. These results do not establish compatibility
 with every browser or device.
 
+A separate manual pass on 2026-10-27 recorded Windows 11 and Chrome 156:
+invalid JSON and invalid schema rejection, preserved form data after cancelled
+or failed import, reopening the same file, mobile-width layout at 320, 375 and
+768 px, no observed external network request, no application console error,
+and short and multipage PDF output. A real mobile device has not been tested.
+
 ## B. Additional checks still requiring verification
 
 These are more specific checks or additional coverage. Do not mark them passed
@@ -32,7 +38,7 @@ solely because a broader category in section A was reported as working.
 
 ### 1. Form and arithmetic
 
-- [ ] Load fictional sample data: subtotal is 240.00 USD, discount is
+- [ ] Load the café sample template: subtotal is 240.00 USD, discount is
       20.00 USD, and total is 220.00 USD.
 - [ ] With one service, quantity `3`, unit price `0.10`, and discount `0`,
       row total and proposal total are exactly 0.30.
@@ -45,11 +51,12 @@ solely because a broader category in section A was reported as working.
 - [ ] Included and excluded work preserve separate non-empty lines.
 - [ ] Zero revision rounds are accepted and displayed.
 - [ ] Cancelling reset preserves the current form.
-- [ ] Confirming reset restores the initial form.
+- [ ] Confirming reset restores the initial form and clears the saved draft.
 
 ### 2. Invalid inputs and boundaries
 
-- [ ] Empty provider, client, and project title show Persian errors.
+- [ ] Empty provider, client, project title, proposal number, and issue date
+      show Persian errors.
 - [ ] Whitespace-only required text is rejected.
 - [ ] An empty service description is rejected.
 - [ ] Removing every service produces a minimum-service error.
@@ -64,11 +71,19 @@ solely because a broader category in section A was reported as working.
 - [ ] A discount larger than the subtotal is rejected.
 - [ ] Invalid financial inputs do not display a misleading valid final total.
 
-### 3. JSON export and round-trip import
+### 3. Document identity
+
+- [ ] The issue date defaults to the current Persian-calendar date.
+- [ ] The proposal number default is shown and remains editable.
+- [ ] Proposal number and issue date appear in the preview and print output.
+- [ ] Both fields survive export and import.
+
+### 4. JSON export and round-trip import
 
 - [ ] Export a valid proposal and inspect the downloaded UTF-8 JSON.
 - [ ] Confirm `appId` is `noxaplus-scope-builder`.
-- [ ] Confirm `schemaVersion` is the number `1`.
+- [ ] Confirm `schemaVersion` is the number `2`.
+- [ ] Confirm `proposalNumber` and `proposalDate` are present.
 - [ ] Confirm all editable inputs are present, including optional blank text.
 - [ ] Confirm numeric inputs are stored as strings.
 - [ ] Confirm computed totals are not exported.
@@ -82,17 +97,19 @@ solely because a broader category in section A was reported as working.
 - [ ] Invalid form data prevents export.
 - [ ] An export exceeding 1 MiB is rejected.
 
-### 4. Invalid JSON, invalid schema, and cancellation
+### 5. Import compatibility, invalid JSON, and cancellation
 
 Use copies of exported files, never the only copy of a real proposal.
 
+- [ ] Import a version 1 file: it is accepted, missing proposal number and
+      date receive defaults, and totals are recalculated.
 - [ ] An empty file is rejected.
 - [ ] Malformed JSON is rejected.
 - [ ] A file larger than 1,048,576 bytes is rejected.
 - [ ] Invalid UTF-8 is rejected.
 - [ ] An incorrect or missing `appId` is rejected.
-- [ ] `schemaVersion: 2` is rejected.
-- [ ] `schemaVersion: "1"` is rejected because it is a string.
+- [ ] `schemaVersion: 3` is rejected.
+- [ ] `schemaVersion: "2"` is rejected because it is a string.
 - [ ] A top-level array or `null` is rejected.
 - [ ] Missing expected fields are rejected.
 - [ ] Incorrect types, including numeric values where strings are expected,
@@ -109,23 +126,63 @@ Use copies of exported files, never the only copy of a real proposal.
 - [ ] Imported `<b>example</b>` appears as text, not rendered markup.
 - [ ] Imported content does not automatically trigger printing.
 
-### 5. Short proposal printing and PDF
+### 6. Local autosave and draft handling
+
+- [ ] Edit the form, wait briefly, and reload: the draft is restored and the
+      restore banner appears.
+- [ ] "پاک کردن نسخهٔ ذخیره‌شده" removes the saved copy, keeps the current
+      form, and autosave resumes on the next edit.
+- [ ] "شروع تازه" clears the form and the saved draft.
+- [ ] Import, template, and reset actions update the saved draft.
+- [ ] With browser site data cleared, loading starts from the blank form and
+      autosave reports availability again after editing.
+- [ ] In private/restricted mode, the toolbar reports that saving is
+      unavailable and export still works.
+- [ ] Confirm the draft is stored under `noxaplus-scope-builder:draft` and the
+      theme under `noxaplus-scope-builder:theme`, and nothing else by app code.
+- [ ] Confirm nothing is written to sessionStorage, IndexedDB, or cookies by
+      the application.
+
+### 7. Theme and layout
+
+- [ ] First visit follows the operating-system light/dark preference.
+- [ ] The theme toggle switches themes and the choice survives a reload.
+- [ ] The browser address-bar color follows the selected theme.
+- [ ] On a wide screen, the preview is sticky and scrolls independently.
+- [ ] The completion meter and autosave status update while editing.
+- [ ] At 320 px the page has no unintended page-wide overflow.
+- [ ] At 375–390 px controls remain readable and usable.
+- [ ] Editor and preview stack as tabs at narrow widths.
+- [ ] Tabs respond to click, arrow keys, Home, and End.
+- [ ] The preview print button appears in the mobile preview toolbar.
+
+### 8. Templates and confirmation dialogs
+
+- [ ] Each template loads its values into the form and preview.
+- [ ] A template applied to an empty form loads without a confirmation.
+- [ ] A template applied over meaningful content asks for confirmation.
+- [ ] Declining the confirmation preserves the current proposal.
+- [ ] Confirming replacement loads the template.
+- [ ] Dialogs are keyboard usable and focus returns to a sensible control.
+
+### 9. Short proposal printing and PDF
 
 - [ ] The application print button refuses an invalid proposal.
 - [ ] Print immediately after editing; output includes the newest values.
 - [ ] Only the proposal preview appears, without editor controls or notices.
-- [ ] Provider, client, title, service table, amounts, revision rounds, and
-      legal disclaimer are present.
+- [ ] The preview print button triggers the same behavior as the editor button.
+- [ ] Provider, client, title, document number and date, service table,
+      amounts, revision rounds, and legal disclaimer are present.
 - [ ] Non-empty optional sections are included.
 - [ ] Blank optional sections and their placeholder messages are omitted.
-- [ ] A4 portrait output is readable with the intended margins.
+- [ ] A4 portrait output is readable with 15 mm margins.
 - [ ] Output remains readable with background graphics disabled.
 - [ ] Save as PDF, open the resulting file, and inspect the actual pages.
 - [ ] Cancelling printing does not clear data or disable normal actions.
 - [ ] The application never claims that a PDF was successfully saved.
 - [ ] Browser header/footer settings can be adjusted separately.
 
-### 6. Multipage proposal printing
+### 10. Multipage proposal printing
 
 - [ ] Create approximately 30–50 valid service rows to span multiple pages.
 - [ ] Confirm the first and last rows and all intermediate rows are present.
@@ -138,7 +195,7 @@ Use copies of exported files, never the only copy of a real proposal.
 - [ ] Check that no content is forced into a single scaled-down page.
 - [ ] Check for unintended blank pages or large unexplained gaps.
 
-### 7. Persian and mixed-direction text
+### 11. Persian and mixed-direction text
 
 - [ ] Persian text is legible on screen and in the saved PDF.
 - [ ] Test `طراحی Landing Page برای NoxaPlus` in a description.
@@ -147,27 +204,28 @@ Use copies of exported files, never the only copy of a real proposal.
 - [ ] Inspect amounts with تومان and Persian digits.
 - [ ] Check long unbroken text for overflow or clipping.
 
-### 8. Mobile-width layout and keyboard use
+### 12. Mobile-width layout and keyboard use
 
 - [ ] At approximately 320 px, the page has no unintended page-wide overflow.
 - [ ] At approximately 375–390 px, controls remain readable and usable.
 - [ ] Editor and preview stack vertically at narrow widths.
 - [ ] The service table can be horizontally scrolled without clipping the page.
-- [ ] Add, remove, export, import, print, sample, and reset buttons are usable.
+- [ ] Add, remove, export, import, print, template, theme, and reset controls
+      are usable.
 - [ ] Keyboard focus is visible.
 - [ ] Form labels identify their associated controls.
-- [ ] File-operation and print messages are understandable.
+- [ ] File-operation, print, template, and draft messages are understandable.
 - [ ] Check on an actual mobile device, not only a resized desktop window.
 
-### 9. Data-flow inspection
+### 13. Data-flow inspection
 
 - [ ] With browser developer tools, inspect runtime network activity and confirm
       no application-initiated external requests occur during editing,
-      export/import, or print preparation.
-- [ ] Confirm no proposal is written to localStorage, sessionStorage, IndexedDB,
-      or cookies by application code.
-- [ ] Refresh after editing and confirm there is no app-managed restoration.
-- [ ] Distinguish any browser form restoration from application persistence.
+      autosave, export/import, or print preparation.
+- [ ] Confirm the bundled font and icons load from local files, not a CDN.
+- [ ] Refresh after editing and confirm the restore banner appears only when a
+      saved draft exists, and that the draft belongs to this application.
+- [ ] Distinguish browser form restoration from application autosave.
 
 ## Recording a new manual run
 
@@ -195,16 +253,18 @@ screenshots, or test reports.
 ثبت نشده است.
 
 هیچ موردی در این سند آزمون خودکار محسوب نمی‌شود.
+
 ## محیط آزمون دستی
 
 - تاریخ: Oct 27 2026
 - سیستم‌عامل و نسخه: Windows 11 pro 26H2
-- مرورگر و نسخه:Chrome  156.0.8078.48
+- مرورگر و نسخه: Chrome 156.0.8078.48
 - دستگاه: کامپیوتر ویندوزی Laptop
 - روش اجرا: باز کردن مستقیم index.html
 - آزمون روی موبایل واقعی: انجام نشده
-- آزمون نمای موبایل در ابزار مرورگر: در انتظار بررسی
-## گزارش آزمون دستی پیش از انتشار
+- آزمون نمای موبایل در ابزار مرورگر: عرض‌های 320، 375 و 768 بررسی شد
+
+## گزارش آزمون دستی پیش از انتشار (نسخهٔ ۰.۱.۰)
 
 - تاریخ آزمون: 2026-10-27
 - سیستم‌عامل: Windows — [نسخه واقعی را وارد کنید]
@@ -223,3 +283,10 @@ screenshots, or test reports.
 
 این نتایج مربوط به آزمون دستی در محیط بالا هستند؛
 آزمون روی همه مرورگرها و دستگاه‌ها انجام نشده است.
+
+## تغییرات نسخهٔ ۰.۲.۰ که هنوز آزمون دستی مستقل ندارند
+
+این موارد در بررسی خودکار محلی بررسی شده‌اند اما آزمون دستی مستقل
+برای آن‌ها ثبت نشده است: تم روشن و تاریک، پیش‌نمایش چسبان، تب‌های
+موبایل، ذخیرهٔ خودکار و نوار بازیابی، الگوهای آماده، شماره و تاریخ سند،
+مهاجرت ساختار ۱ به ۲، و حاشیهٔ ۱۵ میلی‌متری چاپ.
