@@ -3,6 +3,17 @@
 This file records project changes. An entry here does not indicate that a
 GitHub release or a hosted deployment exists.
 
+## [0.3.0] - 2026-11-16
+
+Brand and readability update.
+
+### Changed
+
+- The hero headline now stays on one line on desktop windows instead of
+  wrapping in the middle of the sentence; narrow screens still wrap normally.
+- The original NoxaPlus logo replaces the letter tile in the header, favicon,
+  and project README, with a light variant for the dark theme.
+
 ## [0.2.0] - 2026-11-16
 
 Interface and workflow redesign, with local autosave and reusable templates.

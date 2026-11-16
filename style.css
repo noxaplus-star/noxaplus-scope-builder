@@ -207,6 +207,25 @@ button, a, input, select, textarea, summary, .table-scroll {
   gap: 12px;
 }
 
+.brand-logo {
+  display: block;
+  width: auto;
+  height: 46px;
+  flex: none;
+}
+
+.brand-logo-light {
+  display: none;
+}
+
+:root[data-theme="dark"] .brand-logo-dark {
+  display: none;
+}
+
+:root[data-theme="dark"] .brand-logo-light {
+  display: block;
+}
+
 .brand-mark,
 .doc-brand-mark {
   display: grid;
@@ -328,11 +347,17 @@ button, a, input, select, textarea, summary, .table-scroll {
 }
 
 h1 {
-  max-width: 20ch;
   font-size: clamp(30px, 4vw, 46px);
   font-weight: 800;
   line-height: 1.35;
   letter-spacing: 0;
+}
+
+@media (min-width: 1051px) {
+  h1 {
+    font-size: clamp(30px, 3.1vw, 42px);
+    white-space: nowrap;
+  }
 }
 
 .lede {
@@ -1968,6 +1993,10 @@ td:first-child {
 
   .header-inner {
     min-height: 66px;
+  }
+
+  .brand-logo {
+    height: 38px;
   }
 
   .local-badge {

@@ -1,8 +1,8 @@
 # Manual test checklist
 
 Project: NoxaPlus Scope Builder  
-Documentation baseline: 0.2.0  
-Recorded: 2026-10-26, updated for 0.2.0 on 2026-11-16
+Documentation baseline: 0.3.0  
+Recorded: 2026-10-26, updated for 0.3.0 on 2026-11-16
 
 This document records manual testing only. No automated test suite is included
 in the repository, and no automated test execution is claimed here.

@@ -1,7 +1,7 @@
 # Privacy and data flow
 
 Project: NoxaPlus Scope Builder  
-Implementation baseline: 0.2.0  
+Implementation baseline: 0.3.0  
 Reviewed against the application code documented on 2026-11-16.
 
 This document describes the application's own implementation. It is not a

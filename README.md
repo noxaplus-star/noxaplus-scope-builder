@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/brand.png" alt="NoxaPlus" width="520"></p>
+
 ## Live Demo
 
 [Open NoxaPlus Scope Builder](https://noxaplus-star.github.io/noxaplus-scope-builder/)
@@ -12,7 +14,7 @@ plain HTML, CSS, and JavaScript, without a backend, build step, or external
 runtime dependencies.
 
 Author / brand: **NoxaPlus**  
-Documented version: **0.2.0**
+Documented version: **0.3.0**
 
 ## What it does
 
